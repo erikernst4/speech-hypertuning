@@ -9,6 +9,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 pre-commit = "^3.6.0"
+ginpipe = "^0.0.1"
+lightning = "^2.2.0.post0"
 
 
 [build-system]
