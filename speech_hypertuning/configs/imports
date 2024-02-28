@@ -1,7 +1,10 @@
 lightning: pl
 lightning.Trainer: pl.Trainer
-lightning.loggers: pl.loggers
-lightning.callbacks: pl.callbacks
+lightning.pytorch.loggers: pl.loggers
+lightning.pytorch.callbacks: pl.callbacks
 torch.utils.data: torch.utils.data
 torch.optim: torch.optim
 torchmetrics: torchmetrics
+speech_hypertuning.tasks: tasks
+speech_hypertuning.tasks.utils: tasks.utils
+speech_hypertuning.tasks.load_data: tasks.load_data

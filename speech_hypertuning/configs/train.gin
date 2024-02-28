@@ -1,6 +1,6 @@
 execute_pipeline:
     tasks = [@tasks.utils.set_seed,
-             @tasks.data.load_dataset]
+             @tasks.load_data.load_dataset]
     execution_order = 'sequential'
 
 tasks.utils.set_seed.seed=%SEED
@@ -9,27 +9,14 @@ train/torch.utils.data.DataLoader:
     shuffle=True
     batch_size=%TRAIN_BATCH_SIZE
     num_workers=%TRAIN_DATALOADER_NUM_WORKERS
-    collate_fn=@tasks.data.dynamic_pad_batch
+    collate_fn=@tasks.load_data.dynamic_pad_batch
 
 val/torch.utils.data.DataLoader:
     shuffle=False
     batch_size=%VAL_BATCH_SIZE
     num_workers=%VAL_DATALOADER_NUM_WORKERS
-    collate_fn=@tasks.data.dynamic_pad_batch
+    collate_fn=@tasks.load_data.dynamic_pad_batch
 
 pl.loggers.CSVLogger:
     save_dir=%OUTPUT_DIR
     name='pretrain_logs'
-
-tasks.data.get_dataloaders.split_function=@tasks.data.dataset_random_split
-tasks.data.get_dataloaders.dataset_cls={'train': @train/tasks.data.DictDataset, 'validation': @val/tasks.data.DictDataset}
-tasks.data.get_dataloaders.dataloader_cls={'train': @train/torch.utils.data.DataLoader, 'validation': @val/torch.utils.data.DataLoader}
-
-tasks.data.dataset_random_split:
-    proportions={'train':-1,'validation':%VAL_SET_SIZE}
-
-tasks.data.DictDataset.index_mapper=@tasks.data.compensate_lengths
-tasks.data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will sample long audios multiple times during one epoch (duration//compensate_framing times)
-
-tasks.data.load_dataset.filters=[@tasks.data.remove_long_audios]
-tasks.data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
