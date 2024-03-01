@@ -1,7 +1,8 @@
 from typing import Any
+
 import pytorch_lightning as pl
-from torch import nn
 from s3prl.nn import S3PRLUpstream
+from torch import nn
 
 
 class WavLMBasePlusForSpeakerIdentification(pl.LightningModule):
