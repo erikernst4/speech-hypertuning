@@ -1,5 +1,6 @@
 ginpipe configs/default_parameters.gin \
 			configs/train.gin \
+			configs/dict_dataset.gin \
 			configs/datasets/voxceleb1.gin \
 			--module_list configs/imports \
 			--project_name experiment_lr \

@@ -1,6 +1,7 @@
 execute_pipeline:
     tasks = [@tasks.utils.set_seed,
              @tasks.load_data.load_dataset,
+             @tasks.process_classes,
              @tasks.load_data.get_dataloaders,]
     execution_order = 'sequential'
 
