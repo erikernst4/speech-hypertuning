@@ -1,7 +1,7 @@
 execute_pipeline:
     tasks = [@tasks.utils.set_seed,
              @tasks.load_data.load_dataset,
-             @tasks.data.get_dataloaders,]
+             @tasks.load_data.get_dataloaders,]
     execution_order = 'sequential'
 
 tasks.utils.set_seed.seed=%SEED
@@ -22,15 +22,15 @@ pl.loggers.CSVLogger:
     save_dir=%OUTPUT_DIR
     name='pretrain_logs'
 
-tasks.data.get_dataloaders.split_function=@tasks.data.dataset_random_split
-tasks.data.get_dataloaders.dataset_cls={'train': @train/tasks.data.DictDataset, 'validation': @val/tasks.data.DictDataset}
-tasks.data.get_dataloaders.dataloader_cls={'train': @train/torch.utils.data.DataLoader, 'validation': @val/torch.utils.data.DataLoader}
+tasks.load_data.get_dataloaders.split_function=@tasks.load_data.dataset_random_split
+tasks.load_data.get_dataloaders.dataset_cls={'train': @train/tasks.load_data.DictDataset, 'validation': @val/tasks.load_data.DictDataset}
+tasks.load_data.get_dataloaders.dataloader_cls={'train': @train/torch.utils.data.DataLoader, 'validation': @val/torch.utils.data.DataLoader}
 
-tasks.data.dataset_random_split:
+tasks.load_data.dataset_random_split:
     proportions={'train':-1,'validation':%VAL_SET_SIZE}
 
-tasks.data.DictDataset.index_mapper=@tasks.data.compensate_lengths
-tasks.data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will sample long audios multiple times during one epoch (duration//compensate_framing times)
+tasks.load_data.DictDataset.index_mapper=@tasks.load_data.compensate_lengths
+tasks.load_data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will sample long audios multiple times during one epoch (duration//compensate_framing times)
 
-tasks.data.load_dataset.filters=[@tasks.data.remove_long_audios]
-tasks.data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
+tasks.load_data.load_dataset.filters=[@tasks.load_data.remove_long_audios]
+tasks.load_data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
