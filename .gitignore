@@ -54,3 +54,6 @@ cover/
 # Experiments
 
 speech_hypertuning/experiments/
+
+# Notebooks cache
+*ipynb_checkpoints/
