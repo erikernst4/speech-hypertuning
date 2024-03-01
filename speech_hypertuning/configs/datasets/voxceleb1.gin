@@ -1,3 +1,3 @@
 load_dataset.reader_fn+=[@voxceleb1/read_audiodir]
-voxceleb1/read_audiodir.dataset_path='/workspace/datasets/voxceleb1/unbalanced_train'
+voxceleb1/read_audiodir.dataset_path='/workspace/datasets/Voxceleb1/'
 voxceleb1/read_audiodir.dataset='voxceleb1'
