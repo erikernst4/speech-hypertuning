@@ -1,9 +1,8 @@
-from pathlib import Path
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
 import torch
-from loguru import logger
 
 
 def get_dataloaders(
@@ -110,7 +109,6 @@ def dynamic_pad_batch(x):
             else:
                 return x
 
-    x_ = x
     x = [xi for xi in x if not_discarded(xi)]
 
     batch = {k: [np.array(xi[k]) for xi in x] for k in x[0]}
@@ -130,18 +128,32 @@ def dynamic_pad_batch(x):
 def compensate_lengths(df, chunk_length=None):
     if chunk_length is not None:
         map_idx = []
-        for i, (idx, row) in enumerate(df.iterrows()):
+        for i, (_, row) in enumerate(df.iterrows()):
             map_idx.extend([i] * int(max(1, row['duration'] // chunk_length)))
         return map_idx
     else:
         return list(range(len(df)))
 
 
-def read_selflearning_dataset(dataset_path):
-    df = pd.read_csv(
-        Path(dataset_path, 'metadata_selftrain_dataset.csv'),
-        names=['start', 'stop', 'filename'],
-    )
-    df = df.reset_index()
-    df = df.rename({'index': 'filename_audio', 'filename': 'filename_targets'}, axis=1)
-    return df
+def process_classes(state: Dict[str, Any], dataset_name: str = "") -> Dict[str, Any]:
+
+    speaker_id_column_name = "speaker_id"
+
+    state['dataset_metadata'][speaker_id_column_name] = state['dataset_metadata'][
+        speaker_id_column_name
+    ].apply(lambda x: x + dataset_name)
+
+    mapping = {
+        original_id: i
+        for i, original_id in enumerate(
+            state['dataset_metadata'][speaker_id_column_name].unique()
+        )
+    }
+
+    state['dataset_metadata']['class_id'] = state['dataset_metadata'][
+        speaker_id_column_name
+    ].apply(lambda x: mapping[x])
+
+    state["speaker_id_mapping"] = mapping
+
+    return state
