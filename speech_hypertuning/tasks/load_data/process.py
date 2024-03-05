@@ -141,7 +141,7 @@ def process_classes(state: Dict[str, Any], dataset_name: str = "") -> Dict[str, 
 
     state['dataset_metadata'][speaker_id_column_name] = state['dataset_metadata'][
         speaker_id_column_name
-    ].apply(lambda x: x + dataset_name)
+    ].apply(lambda x: x + "_" + dataset_name)
 
     mapping = {
         original_id: i
