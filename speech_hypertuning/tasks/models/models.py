@@ -9,7 +9,7 @@ class S3PRLUpstreamMLPDownstreamForCls(pl.LightningModule):
     def __init__(
         self,
         state: Dict[str, Any],
-        upstream: str = 'data2vec',
+        upstream: str = 'wavlm_base_plus',
         upstream_layers_output_to_use: Union[str, List[int], int] = -1,
         hidden_layers: int = 2,
         hidden_dim: int = 128,
