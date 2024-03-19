@@ -22,7 +22,7 @@ val/torch.utils.data.DataLoader:
     num_workers=%VAL_DATALOADER_NUM_WORKERS
     collate_fn=@tasks.load_data.dynamic_pad_batch
 
-tasks.fit_model:
+tasks.models.fit_model:
     trainer_cls=@pl.Trainer
     from_checkpoint=%INITIAL_CHECKPOINT
     checkpoint_folder='pretrain_checkpoints'
