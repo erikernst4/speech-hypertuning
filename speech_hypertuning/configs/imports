@@ -8,3 +8,4 @@ torchmetrics: torchmetrics
 speech_hypertuning.tasks: tasks
 speech_hypertuning.tasks.utils: tasks.utils
 speech_hypertuning.tasks.load_data: tasks.load_data
+speech_hypertuning.tasks.models: tasks.models

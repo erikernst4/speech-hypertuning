@@ -1,8 +1,11 @@
 execute_pipeline:
-    tasks = [@tasks.utils.set_seed,
-             @tasks.load_data.load_dataset,
-             @tasks.load_data.process_classes,
-             @tasks.load_data.get_dataloaders,]
+    tasks = [
+        @tasks.utils.set_seed,
+        @tasks.load_data.load_dataset,
+        @tasks.load_data.process_classes,
+        @tasks.load_data.get_dataloaders,
+        @tasks.models.fit_model,
+    ]
     execution_order = 'sequential'
 
 tasks.utils.set_seed.seed=%SEED
@@ -18,6 +21,27 @@ val/torch.utils.data.DataLoader:
     batch_size=%VAL_BATCH_SIZE
     num_workers=%VAL_DATALOADER_NUM_WORKERS
     collate_fn=@tasks.load_data.dynamic_pad_batch
+
+tasks.fit_model:
+    trainer_cls=@pl.Trainer
+    from_checkpoint=%INITIAL_CHECKPOINT
+    checkpoint_folder='pretrain_checkpoints'
+
+pl.Trainer:
+    logger=@pl.loggers.CSVLogger()
+    devices=%DEVICE
+    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.LearningRateMonitor()]
+    max_steps=%TOTAL_PRETRAIN_STEPS
+    accelerator='gpu'
+    accumulate_grad_batches=%GRAD_ACC
+    num_sanity_val_steps=1
+    val_check_interval=%CHECKPOINT_INTERVAL
+    precision=%PRECISION
+    check_val_every_n_epoch=None
+
+pl.callbacks.ModelCheckpoint:
+    dirpath=%OUTPUT_DIR
+    every_n_train_steps=%CHECKPOINT_INTERVAL
 
 pl.loggers.CSVLogger:
     save_dir=%OUTPUT_DIR

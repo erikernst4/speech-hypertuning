@@ -1,0 +1,2 @@
+tasks.models.S3PRLUpstreamMLPDownstreamForCls:
+    optimizer_params={"lr": 1e-3}
