@@ -140,8 +140,24 @@ def subsample_dataset(
 
     chosen_speakers = sample(population=possible_speakers, k=n_speakers)
 
-    dataset_df = dataset_df[dataset_df["speaker_id"].isin(chosen_speakers)]
+    # Get audios from chosen speakers
+    chosen_speakers_dfs = []
+    for sid in chosen_speakers:
+        speaker_df = dataset_df[dataset_df['speaker_id'] == sid]
+        video_ids = speaker_df['video_id'].unique()
+        chosen_videos = sample(population=video_ids, k=k_audios)
 
-    state[out_key] = dataset_df
+        audios_df = []
+        for video_id in chosen_videos:
+            video_df = speaker_df[speaker_df['video_id'] == video_id]
+            chosen_audio = sample(population=video_df["segment_id"], k=1)
+            audio_df = video_df[video_df["segment_id"] == chosen_audio]
+            audios_df.append(audio_df)
+
+        speaker_df = pd.concat(audios_df)
+        chosen_speakers_dfs.append(speaker_df)
+
+    subsample_df = pd.concat(chosen_speakers_dfs)
+    state[out_key] = subsample_df
 
     return state
