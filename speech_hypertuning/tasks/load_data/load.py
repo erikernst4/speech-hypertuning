@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+from random import sample
 from typing import Any, Dict, List
 
 import numpy as np
@@ -16,7 +17,7 @@ def load_dataset(
     filters: List[Any] = [],
     key_out: str = 'dataset_metadata',
     rename=None,
-):
+) -> Dict[str, Any]:
 
     if not (cache and key_out in state):
         if not isinstance(reader_fn, list):
@@ -116,3 +117,31 @@ def read_audiodir(
         )
         df = df.drop('rel_path', axis=1)
     return df
+
+
+def subsample_dataset(
+    state: Dict[str, Any],
+    n_speakers: int,
+    k_audios: int,
+    max_length: float,
+    out_key: str = "filtered_dataset_metadata",
+) -> Dict[str, Any]:
+    dataset_df = state["dataset_metadata"].copy()
+
+    dataset_df = dataset_df[dataset_df["duration"] < max_length]
+
+    # Get speakers that have more than k audios from different videos
+    possible_speakers = [
+        sid
+        for sid in dataset_df['speaker_id'].unique()
+        if len(dataset_df[dataset_df['speaker_id'] == sid]['video_id'].unique())
+        > k_audios
+    ]
+
+    chosen_speakers = sample(population=possible_speakers, k=n_speakers)
+
+    dataset_df = dataset_df[dataset_df["speaker_id"].isin(chosen_speakers)]
+
+    state[out_key] = dataset_df
+
+    return state
