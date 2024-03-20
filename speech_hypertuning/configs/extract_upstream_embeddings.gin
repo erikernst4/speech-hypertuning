@@ -1,0 +1,13 @@
+execute_pipeline:
+    tasks = [
+        @tasks.utils.set_seed,
+        @tasks.load_data.load_dataset,
+        @tasks.load_data.subsample_dataset,
+        @tasks.models.save_upstream_embeddings,
+    ]
+    execution_order = 'sequential'
+
+
+tasks.utils.set_seed.seed=%SEED
+tasks.load_data.load_dataset.filters=[@tasks.load_data.remove_long_audios]
+tasks.load_data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
