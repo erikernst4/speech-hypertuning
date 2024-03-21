@@ -15,6 +15,8 @@ def save_upstream_embeddings(
 ) -> None:
     upstream = S3PRLUpstream(upstream)
 
+    os.makedirs(saving_path, exist_ok=True)
+
     # Get dataset audios filenames
     dataset_df = state[df_key]
 
@@ -28,7 +30,7 @@ def save_upstream_embeddings(
         embedding = extract_upstream_embedding(upstream, waveform, valid_length)
 
         embedding_saving_path = os.path.join(
-            saving_path, row["speaker_id"], row["video_id"], row["segment_id"]
+            saving_path, f'{row["speaker_id"]}_{row["video_id"]}_{row["segment_id"]}.pt'
         )
         torch.save(embedding, embedding_saving_path)
 
