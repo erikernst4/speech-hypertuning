@@ -1,11 +1,11 @@
 from typing import Any, Dict, List, Union
 
-import pytorch_lightning as pl
+from lightning import LightningModule
 import torch
 from s3prl.nn import S3PRLUpstream
 
 
-class S3PRLUpstreamMLPDownstreamForCls(pl.LightningModule):
+class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
     def __init__(
         self,
         state: Dict[str, Any],
@@ -95,4 +95,4 @@ class S3PRLUpstreamMLPDownstreamForCls(pl.LightningModule):
         self.log_dict({'{}_{}'.format(prefix, k): v for k, v in losses.items()})
 
     def configure_optimizers(self) -> None:
-        return torch.optim.Adam(**self.optimizer_params)
+        return torch.optim.Adam(params=self.parameters(), **self.optimizer_params)
