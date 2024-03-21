@@ -16,9 +16,10 @@ def save_upstream_embeddings(
     upstream = S3PRLUpstream(upstream)
 
     # Get dataset audios filenames
-    wavs_fnames = state[df_key]["filename"].tolist()
+    dataset_df = state[df_key]
 
-    for fname in tqdm(wavs_fnames):
+    for _, row in tqdm(dataset_df.iterrows()):
+        fname = row["filename"]
         waveform, _ = torchaudio.load(fname)
         waveform = waveform.unsqueeze(0)  # Add batch dimension
 
@@ -27,7 +28,9 @@ def save_upstream_embeddings(
 
         embedding = extract_upstream_embedding(upstream, waveform, valid_length)
 
-        embedding_saving_path = os.path.join(saving_path, fname)
+        embedding_saving_path = os.path.join(
+            saving_path, row["speaker_id"], row["video_id"], row["segment_id"]
+        )
         torch.save(embedding, embedding_saving_path)
 
 
