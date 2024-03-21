@@ -10,4 +10,4 @@ execute_pipeline:
 tasks.utils.set_seed.seed=%SEED
 
 tasks.models.save_upstream_embeddings:
-    saving_path = "/datasets/Voxceleb1/avg_embeddings"
+    saving_path = "/home/eernst/Voxceleb1/avg_embeddings"
