@@ -17,7 +17,7 @@ class S3PRLUpstreamMLPDownstreamForCls(pl.LightningModule):
     ):
         super().__init__()
         self.optimizer_params = optimizer_params
-        self.mapping = state['class_map']
+        self.mapping = state['speaker_id_mapping']
 
         self.upstream = S3PRLUpstream(upstream)
         upstream_dim = self.upstream.hidden_sizes[0]
