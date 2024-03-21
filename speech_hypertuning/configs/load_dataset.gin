@@ -9,3 +9,11 @@ tasks.load_data.ProcessorReadAudio:
 
 tasks.load_data.ProcessorLoadUpstreamEmbedding:
     devices = %DEVICE
+
+tasks.load_data.load_dataset.filters=[@tasks.load_data.remove_long_audios]
+tasks.load_data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
+
+tasks.load_data.subsample_dataset:
+    n_speakers = 100
+    k_audios = 25
+    max_length = 10

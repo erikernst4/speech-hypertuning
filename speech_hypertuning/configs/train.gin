@@ -2,6 +2,7 @@ execute_pipeline:
     tasks = [
         @tasks.utils.set_seed,
         @tasks.load_data.load_dataset,
+        @tasks.load_data.subsample_dataset,
         @tasks.load_data.process_classes,
         @tasks.load_data.get_dataloaders,
         @tasks.models.fit_model,
@@ -55,9 +56,13 @@ pl.callbacks.EarlyStopping:
     verbose=False
     mode="min"
 
-tasks.load_data.get_dataloaders.split_function=@tasks.load_data.dataset_random_split
-tasks.load_data.get_dataloaders.dataset_cls={'train': @train/tasks.load_data.DictDataset, 'validation': @val/tasks.load_data.DictDataset}
-tasks.load_data.get_dataloaders.dataloader_cls={'train': @train/torch.utils.data.DataLoader, 'validation': @val/torch.utils.data.DataLoader}
+tasks.load_data.get_dataloaders:
+    split_function=@tasks.load_data.dataset_random_split
+    dataset_key_in="filtered_dataset_metadata"
+    dataset_cls={'train': @train/tasks.load_data.DictDataset, 'validation': @val/tasks.load_data.DictDataset}
+    dataloader_cls={'train': @train/torch.utils.data.DataLoader, 'validation': @val/torch.utils.data.DataLoader}
+
+tasks.load_data.process_classes.dataset_key_in="filtered_dataset_metadata"
 
 tasks.load_data.dataset_random_split:
     proportions={'train':-1,'validation':%VAL_SET_SIZE}

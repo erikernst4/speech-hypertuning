@@ -7,15 +7,7 @@ execute_pipeline:
     ]
     execution_order = 'sequential'
 
-
 tasks.utils.set_seed.seed=%SEED
-tasks.load_data.load_dataset.filters=[@tasks.load_data.remove_long_audios]
-tasks.load_data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
-
-tasks.load_data.subsample_dataset:
-    n_speakers = 100
-    k_audios = 25
-    max_length = 10
 
 tasks.models.save_upstream_embeddings:
     saving_path = "/home/eernst/Voxceleb1/avg_embeddings"
