@@ -23,6 +23,7 @@ val/torch.utils.data.DataLoader:
     collate_fn=@tasks.load_data.dynamic_pad_batch
 
 tasks.models.fit_model:
+    model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
     trainer_cls=@pl.Trainer
     from_checkpoint=%INITIAL_CHECKPOINT
     checkpoint_folder='pretrain_checkpoints'
