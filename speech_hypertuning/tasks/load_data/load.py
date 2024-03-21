@@ -126,6 +126,11 @@ def subsample_dataset(
     max_length: float,
     out_key: str = "filtered_dataset_metadata",
 ) -> Dict[str, Any]:
+
+    if out_key in state:
+        logger.info('Caching dataset metadata from state')
+        return state
+
     dataset_df = state["dataset_metadata"].copy()
 
     dataset_df = dataset_df[dataset_df["duration"] < max_length]
