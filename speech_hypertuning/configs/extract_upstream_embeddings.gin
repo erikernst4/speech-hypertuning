@@ -18,4 +18,4 @@ tasks.load_data.subsample_dataset:
     max_length = 10
 
 tasks.models.save_upstream_embeddings:
-    saving_path = "/datasets/Voxceleb1/avg_embeddings"
+    saving_path = "/home/eernst/Voxceleb1/avg_embeddings"
