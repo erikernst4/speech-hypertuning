@@ -21,7 +21,6 @@ def save_upstream_embeddings(
     for _, row in tqdm(dataset_df.iterrows()):
         fname = row["filename"]
         waveform, _ = torchaudio.load(fname)
-        waveform = waveform.unsqueeze(0)  # Add batch dimension
 
         # Obtain the valid length of the waveform
         valid_length = torch.tensor([waveform.size(1)])
