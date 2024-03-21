@@ -1,8 +1,11 @@
 tasks.load_data.DictDataset:
     out_cols=['wav','class_id']
-    preprocessors=[@tasks.load_data.ProcessorReadAudio]
-    
+    preprocessors=[@tasks.load_data.ProcessorLoadUpstreamEmbedding]
+
 tasks.load_data.ProcessorReadAudio:
     input = 'filename'
     max_length = %MAX_AUDIO_DURATION
     output = 'wav'
+
+tasks.load_data.ProcessorLoadUpstreamEmbedding:
+    devices = %DEVICE

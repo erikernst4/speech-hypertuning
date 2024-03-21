@@ -48,9 +48,8 @@ class S3PRLUpstreamMLPDownstreamForCls(pl.LightningModule):
         )
 
     def forward(self, x: torch.Tensor):
-        with torch.no_grad():
-            hidden, _ = self.upstream(x['wav'], wavs_len=x['wavs_len'])
-        hidden = torch.stack(hidden).transpose(0, 1)
+
+        hidden = self.forward_upstream(x)
 
         w = torch.nn.functional.softmax(self.avg_weights, dim=0)
 
@@ -60,6 +59,15 @@ class S3PRLUpstreamMLPDownstreamForCls(pl.LightningModule):
         )
 
         return self.out_layer(self.downstream(avg_hidden))
+
+    def forward_upstream(self, x) -> torch.Tensor:
+        if not x.get("upstream_embedding_precalculated"):
+            with torch.no_grad():
+                hidden, _ = self.upstream(x['wav'], wavs_len=x['wavs_len'])
+            hidden = torch.stack(hidden).transpose(0, 1)
+        else:
+            hidden = x['upstream_embedding']
+        return hidden
 
     def training_step(
         self,

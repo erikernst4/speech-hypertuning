@@ -1,7 +1,5 @@
 import copy
 
-import numpy as np
-from loguru import logger
 from torch.utils.data import Dataset
 
 
@@ -19,15 +17,7 @@ class DictDataset(Dataset):
         self._out_cols = out_cols
         self._state = {}
         self._state['metadata'] = metadata
-        if 'classID' in state['dataset_metadata'].columns:
-            if isinstance(state['dataset_metadata'].iloc[0]['classID'], np.ndarray):
-                self._state['num_classes'] = len(
-                    state['dataset_metadata'].iloc[0]['classID']
-                )
-            else:
-                self._state['num_classes'] = (
-                    state['dataset_metadata']['classID'].max() + 1
-                )
+
         if state_keys is not None:
             for k in state_keys:
                 if k in state:
