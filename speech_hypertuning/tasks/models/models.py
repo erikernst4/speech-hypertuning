@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Union
 
-from lightning import LightningModule
 import torch
+from lightning import LightningModule
 from s3prl.nn import S3PRLUpstream
 
 
@@ -16,6 +16,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         optimizer_params: Dict[str, Any] = {},
     ):
         super().__init__()
+        self.opt_state = state
         self.optimizer_params = optimizer_params
         self.mapping = state['speaker_id_mapping']
 
@@ -96,3 +97,6 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
     def configure_optimizers(self) -> None:
         return torch.optim.Adam(params=self.parameters(), **self.optimizer_params)
+
+    def set_optimizer_state(self, state: Dict[str, Any]) -> None:
+        self.opt_state = state
