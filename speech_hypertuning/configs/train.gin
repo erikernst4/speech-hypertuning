@@ -30,7 +30,7 @@ tasks.models.fit_model:
 pl.Trainer:
     logger=@pl.loggers.CSVLogger()
     devices=%DEVICE
-    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.LearningRateMonitor(), @pl.callbacks.early_stopping.EarlyStopping(monitor="val_loss", min_delta=0.001, patience=10, verbose=False, mode="min")]
+    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.LearningRateMonitor(), @pl.callbacks.early_stopping.EarlyStopping()]
     max_steps=%TOTAL_PRETRAIN_STEPS
     accelerator='gpu'
     accumulate_grad_batches=%GRAD_ACC
@@ -46,6 +46,13 @@ pl.callbacks.ModelCheckpoint:
 pl.loggers.CSVLogger:
     save_dir=%OUTPUT_DIR
     name='pretrain_logs'
+
+pl.callbacks.early_stopping.EarlyStopping:
+    monitor="val_loss"
+    min_delta=0.001
+    patience=10
+    verbose=False
+    mode="min"
 
 tasks.load_data.get_dataloaders.split_function=@tasks.load_data.dataset_random_split
 tasks.load_data.get_dataloaders.dataset_cls={'train': @train/tasks.load_data.DictDataset, 'validation': @val/tasks.load_data.DictDataset}
