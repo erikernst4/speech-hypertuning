@@ -12,7 +12,7 @@ def save_upstream_embeddings(
     saving_path: str,
     upstream: str = 'wavlm_base_plus',
     df_key: str = "filtered_dataset_metadata",
-) -> None:
+) -> Dict[str, Any]:
     upstream = S3PRLUpstream(upstream)
 
     os.makedirs(saving_path, exist_ok=True)
@@ -20,7 +20,15 @@ def save_upstream_embeddings(
     # Get dataset audios filenames
     dataset_df = state[df_key]
 
+    embeddings_paths = []
     for _, row in tqdm(dataset_df.iterrows()):
+        embedding_saving_path = os.path.join(
+            saving_path, f'{row["speaker_id"]}_{row["video_id"]}_{row["segment_id"]}.pt'
+        )
+        embeddings_paths.append(embedding_saving_path)
+        if os.path.exists(embedding_saving_path):
+            continue
+
         fname = row["filename"]
         waveform, _ = torchaudio.load(fname)
 
@@ -29,10 +37,10 @@ def save_upstream_embeddings(
 
         embedding = extract_upstream_embedding(upstream, waveform, valid_length)
 
-        embedding_saving_path = os.path.join(
-            saving_path, f'{row["speaker_id"]}_{row["video_id"]}_{row["segment_id"]}.pt'
-        )
         torch.save(embedding, embedding_saving_path)
+
+    state[df_key]["embedding_filename"] = embeddings_paths
+    return state
 
 
 def extract_upstream_embedding(
