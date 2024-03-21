@@ -135,11 +135,15 @@ def compensate_lengths(df, chunk_length=None):
         return list(range(len(df)))
 
 
-def process_classes(state: Dict[str, Any], dataset_name: str = "") -> Dict[str, Any]:
+def process_classes(
+    state: Dict[str, Any],
+    dataset_name: str = "",
+    dataset_key_in='dataset_metadata',
+) -> Dict[str, Any]:
 
     speaker_id_column_name = "speaker_id"
 
-    state['dataset_metadata'][speaker_id_column_name] = state['dataset_metadata'][
+    state[dataset_key_in][speaker_id_column_name] = state[dataset_key_in][
         speaker_id_column_name
     ].apply(
         lambda speaker_id: (
@@ -152,11 +156,11 @@ def process_classes(state: Dict[str, Any], dataset_name: str = "") -> Dict[str, 
     mapping = {
         original_id: i
         for i, original_id in enumerate(
-            state['dataset_metadata'][speaker_id_column_name].unique()
+            state[dataset_key_in][speaker_id_column_name].unique()
         )
     }
 
-    state['dataset_metadata']['class_id'] = state['dataset_metadata'][
+    state[dataset_key_in]['class_id'] = state[dataset_key_in][
         speaker_id_column_name
     ].apply(lambda x: mapping[x])
 
