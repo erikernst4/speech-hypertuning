@@ -12,6 +12,7 @@ def save_upstream_embeddings(
     saving_path: str,
     upstream: str = 'wavlm_base_plus',
     df_key: str = "filtered_dataset_metadata",
+    cached_df=True,
 ) -> Dict[str, Any]:
     upstream = S3PRLUpstream(upstream)
 
@@ -19,6 +20,10 @@ def save_upstream_embeddings(
 
     # Get dataset audios filenames
     dataset_df = state[df_key]
+
+    if cached_df and "embedding_filename" in dataset_df.columns:
+        # Use cached filenames
+        return state
 
     embeddings_paths = []
     for _, row in tqdm(dataset_df.iterrows()):
