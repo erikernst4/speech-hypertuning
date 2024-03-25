@@ -3,6 +3,7 @@ execute_pipeline:
         @tasks.utils.set_seed,
         @tasks.load_data.load_dataset,
         @tasks.load_data.subsample_dataset,
+        @tasks.models.save_upstream_embeddings,
         @tasks.load_data.process_classes,
         @tasks.load_data.get_dataloaders,
         @tasks.models.fit_model,
@@ -10,6 +11,9 @@ execute_pipeline:
     execution_order = 'sequential'
 
 tasks.utils.set_seed.seed=%SEED
+
+tasks.models.save_upstream_embeddings:
+    saving_path = "/home/eernst/Voxceleb1/avg_embeddings"
 
 train/torch.utils.data.DataLoader:
     shuffle=True
