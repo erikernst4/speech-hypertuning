@@ -12,7 +12,8 @@ def save_upstream_embeddings(
     saving_path: str,
     upstream: str = 'wavlm_base_plus',
     df_key: str = "filtered_dataset_metadata",
-    cached_df=True,
+    cached_df: bool = True,
+    cached_embeddings: bool = True,
 ) -> Dict[str, Any]:
     upstream = S3PRLUpstream(upstream)
 
@@ -21,7 +22,7 @@ def save_upstream_embeddings(
     # Get dataset audios filenames
     dataset_df = state[df_key]
 
-    if cached_df and "embedding_filename" in dataset_df.columns:
+    if cached_embeddings and cached_df and "embedding_filename" in dataset_df.columns:
         # Use cached filenames
         return state
 
@@ -31,7 +32,7 @@ def save_upstream_embeddings(
             saving_path, f'{row["speaker_id"]}_{row["video_id"]}_{row["segment_id"]}.pt'
         )
         embeddings_paths.append(embedding_saving_path)
-        if os.path.exists(embedding_saving_path):
+        if cached_embeddings and os.path.exists(embedding_saving_path):
             continue
 
         fname = row["filename"]
