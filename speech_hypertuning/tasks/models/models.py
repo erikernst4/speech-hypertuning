@@ -62,7 +62,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         return self.out_layer(self.downstream(avg_hidden))
 
     def forward_upstream(self, x) -> torch.Tensor:
-        if not x.get("upstream_embedding_precalculated"):
+        if not x.get("upstream_embedding_precalculated").all().item(): # Check if all instances have the embedding precalculated
             with torch.no_grad():
                 hidden, _ = self.upstream(x['wav'], wavs_len=x['wav_lens'])
             hidden = torch.stack(hidden).transpose(0, 1)
