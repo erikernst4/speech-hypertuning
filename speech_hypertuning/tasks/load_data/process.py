@@ -102,7 +102,7 @@ def dynamic_pad_batch(x):
                 np.int16,
                 np.int8,
                 np.uint8,
-                np.bool,
+                np.bool_,
             ]:
 
                 return torch.from_numpy(x)
