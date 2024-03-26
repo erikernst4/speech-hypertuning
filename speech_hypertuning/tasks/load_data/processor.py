@@ -50,7 +50,6 @@ def ProcessorReadAudio(x, state, input=None, output=None, max_length=None, mono=
 def ProcessorLoadUpstreamEmbedding(
     x,
     state,
-    devices,
 ):
     embedding_path = x["embedding_filename"]
     x['upstream_embedding'] = torch.load(
