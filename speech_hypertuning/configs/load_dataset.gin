@@ -7,9 +7,6 @@ tasks.load_data.ProcessorReadAudio:
     max_length = %MAX_AUDIO_DURATION
     output = 'wav'
 
-tasks.load_data.ProcessorLoadUpstreamEmbedding:
-    devices = %DEVICE
-
 tasks.load_data.load_dataset.filters=[@tasks.load_data.remove_long_audios]
 tasks.load_data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
 

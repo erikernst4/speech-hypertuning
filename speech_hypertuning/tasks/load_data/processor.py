@@ -53,10 +53,8 @@ def ProcessorLoadUpstreamEmbedding(
     devices,
 ):
     embedding_path = x["embedding_filename"]
-    device = devices[0]
     x['upstream_embedding'] = torch.load(
         embedding_path,
-        map_location=lambda storage, loc: storage.cuda(device),
         weights_only=True,
     )
     x["upstream_embedding_precalculated"] = True
