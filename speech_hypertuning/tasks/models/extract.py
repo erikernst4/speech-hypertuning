@@ -40,9 +40,9 @@ def save_upstream_embeddings(
         # Obtain the valid length of the waveform
         valid_length = torch.tensor([waveform.size(1)])
 
-        embedding = extract_upstream_embedding(upstream, waveform, valid_length)
+        embeddings = extract_upstream_embedding(upstream, waveform, valid_length)
 
-        torch.save(embedding, embedding_saving_path)
+        torch.save(embeddings, embedding_saving_path)
 
     state[df_key]["embedding_filename"] = embeddings_paths
     return state
@@ -59,6 +59,6 @@ def extract_upstream_embedding(
     all_layers_hidden_states = torch.cat(hidden_states)
 
     # Compute the average embedding across all layers
-    average_embedding = torch.mean(all_layers_hidden_states, dim=0)
+    average_embeddings = torch.mean(all_layers_hidden_states, dim=1)
 
-    return average_embedding
+    return average_embeddings
