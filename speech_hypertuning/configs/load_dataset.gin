@@ -1,6 +1,6 @@
 tasks.load_data.DictDataset:
-    out_cols=['wav','class_id']
-    preprocessors=[@tasks.load_data.ProcessorReadAudio, @tasks.load_data.ProcessorLoadUpstreamEmbedding]
+    out_cols=['class_id', 'upstream_embedding', 'upstream_embedding_precalculated']
+    preprocessors=[@tasks.load_data.ProcessorLoadUpstreamEmbedding]
 
 tasks.load_data.ProcessorReadAudio:
     input = 'filename'
