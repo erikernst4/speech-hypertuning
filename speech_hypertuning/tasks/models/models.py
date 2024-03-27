@@ -88,7 +88,8 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.log_results(losses, 'val')
 
     def calculate_loss(self, x: torch.Tensor):
-        yhat = self(x)
+        out = self(x)
+        yhat = out.squeeze()
         y = x['class_id']
         return torch.nn.functional.cross_entropy(yhat, y)
 
