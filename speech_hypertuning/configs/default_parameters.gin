@@ -14,4 +14,4 @@ FILTER_AUDIO_LENGTH=10000 #Some files might be too long according to mediainfo s
 DEVICE=[0]
 PRECISION=16
 
-$keys_not_saved=['datasets','dataloaders']
+$keys_not_saved=['datasets','dataloaders', 'model']
