@@ -56,7 +56,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
         avg_hidden = torch.sum(
             hidden[:, self.upstream_layers_output_to_use] * w[None, :, None, None],
-            dim=1,
+            dim=0,
         )
 
         return self.out_layer(self.downstream(avg_hidden))
