@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Union
 
+from datetime import datetime
 import torch
 from lightning import LightningModule
 from s3prl.nn import S3PRLUpstream
@@ -94,7 +95,11 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         return torch.nn.functional.cross_entropy(yhat, y)
 
     def log_results(self, losses, prefix) -> None:
-        self.log_dict({'{}_{}'.format(prefix, k): v for k, v in losses.items()})
+        log_loss = {
+            "time": int(datetime.now().strftime('%y%m%d%H%M%S')),
+            "loss": losses,
+        }
+        self.log_dict({'{}_{}'.format(prefix, k): v for k, v in log_loss.items()})
 
     def configure_optimizers(self) -> None:
         return torch.optim.Adam(params=self.parameters(), **self.optimizer_params)
