@@ -60,17 +60,20 @@ def dataset_random_split(df: pd.DataFrame, proportions={}):
                 speaker_df = df[df["speaker_id"] == speaker_id]
 
                 if prop_type == 'prop':
-                    v = int(len(speaker_df) * v)
+                    sample_size = int(len(speaker_df) * v)
+                else:
+                    sample_size = v
 
                 sampled_idxs = np.random.choice(
-                    a=speaker_df.index, size=v, replace=False
+                    a=speaker_df.index, size=sample_size, replace=False
                 )
                 partitions_dfs[k].append(speaker_df.loc[sampled_idxs])
                 chosen_idxs += sampled_idxs.tolist()
 
     partitions = {}
     for k, v in proportions.items():
-        partitions[k] = pd.concat(partitions_dfs[k])
+        if partitions_dfs[k]:
+            partitions[k] = pd.concat(partitions_dfs[k])
 
     if remainder_k is not None:
         remainder_idxs = [index for index in df.index if index not in chosen_idxs]
