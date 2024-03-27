@@ -51,12 +51,11 @@ def ProcessorReadAudio(x, state, input=None, output=None, max_length=None, mono=
 def ProcessorLoadUpstreamEmbedding(
     x,
     state: Dict[str, Any],
-    layer: int = -1,
 ):
     embedding_path = x["embedding_filename"]
     x['upstream_embedding'] = torch.load(
         embedding_path,
         weights_only=True,
-    )[layer]
+    )
     x["upstream_embedding_precalculated"] = True
     return x, state
