@@ -80,6 +80,7 @@ def fit_model(
             best_model_path = model.trainer.checkpoint_callback.best_model_path
             if (best_model_path is not None) and (best_model_path != ''):
                 model.load_state_dict(torch.load(best_model_path)['state_dict'])
+            state[model_key_out] = model
         elif model_type == 'sklearn':
             kwargs = {}
             if 'state' in inspect.signature(model_cls.__init__).parameters.keys():
@@ -107,6 +108,7 @@ def fit_model(
             state[dataloaders_key] = model.get_dataloaders(state)
             if hasattr(state[model_key_out], 'optimizer'):
                 del model.optimizer
+            state[model_key_out] = model
 
         logger.info('Model is already in state. Skipping task.')
 
