@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -36,29 +36,46 @@ def get_dataloaders(
 
 
 def dataset_random_split(df: pd.DataFrame, proportions={}):
-    idxs = df.index
-    prop_type = [v for k, v in proportions.items() if v > 1]
-    if len(prop_type) > 0:
+    numerical_value = any(v > 1 for v in proportions.values())
+    if numerical_value:
         prop_type = 'n'
     else:
         prop_type = 'prop'
-    remainder_k = [k for k, v in proportions.items() if v == -1]
-    if len(remainder_k) > 1:
-        raise Exception("-1 can't be used in more than one entry")
-    elif len(remainder_k) == 1:
-        remainder_k = remainder_k[0]
+
+    # Check if remainder is used only once
+    remainder_splits = [k for k, v in proportions.items() if v == -1]
+    if len(remainder_splits) > 1:
+        raise ValueError("-1 can't be used in more than one entry")
+    elif len(remainder_splits) == 1:
+        remainder_k = remainder_splits[0]
     else:
         remainder_k = None
+
+    partitions_dfs: Dict[str, List[pd.DataFrame]] = {}
+    chosen_idxs = []
+    for k, v in proportions.items():
+        partitions_dfs[k] = []
+        if k != remainder_k:
+            for speaker_id in df["speaker_id"].unique():
+                speaker_df = df[df["speaker_id"] == speaker_id]
+
+                if prop_type == 'prop':
+                    v = int(len(speaker_df) * v)
+
+                sampled_idxs = np.random.choice(
+                    a=speaker_df.index, size=v, replace=False
+                )
+                partitions_dfs[k].append(speaker_df.loc[sampled_idxs])
+                chosen_idxs += sampled_idxs
+
     partitions = {}
     for k, v in proportions.items():
-        if k != remainder_k:
-            if prop_type == 'prop':
-                v = int(len(df) * v)
-            sampled_idxs = np.random.choice(idxs, v, replace=False)
-            idxs = [i for i in idxs if i not in sampled_idxs]
-            partitions[k] = df.loc[sampled_idxs]
+        partitions[k] = pd.concat(partitions_dfs[k])
+
     if remainder_k is not None:
-        partitions[remainder_k] = df.loc[idxs]
+        remainder_idxs = [index for index in df.index if index not in chosen_idxs]
+        partitions[remainder_k] = df.loc[remainder_idxs]
+
     return partitions
 
 
