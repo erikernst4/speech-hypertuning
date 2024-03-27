@@ -53,9 +53,10 @@ def ProcessorLoadUpstreamEmbedding(
     state: Dict[str, Any],
 ):
     embedding_path = x["embedding_filename"]
-    x['upstream_embedding'] = torch.load(
-        embedding_path,
-        weights_only=True,
-    )
+    with torch.no_grad():
+        x['upstream_embedding'] = torch.load(
+            embedding_path,
+            weights_only=True,
+        )
     x["upstream_embedding_precalculated"] = True
     return x, state
