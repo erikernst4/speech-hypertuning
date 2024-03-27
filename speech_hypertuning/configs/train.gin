@@ -19,13 +19,11 @@ train/torch.utils.data.DataLoader:
     shuffle=True
     batch_size=%TRAIN_BATCH_SIZE
     num_workers=%TRAIN_DATALOADER_NUM_WORKERS
-    collate_fn=@tasks.load_data.dynamic_pad_batch
 
 val/torch.utils.data.DataLoader:
     shuffle=False
     batch_size=%VAL_BATCH_SIZE
     num_workers=%VAL_DATALOADER_NUM_WORKERS
-    collate_fn=@tasks.load_data.dynamic_pad_batch
 
 tasks.models.fit_model:
     model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
@@ -37,11 +35,10 @@ pl.Trainer:
     logger=@pl.loggers.CSVLogger()
     devices=%DEVICE
     callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.LearningRateMonitor(), @pl.callbacks.EarlyStopping()]
-    max_steps=%TOTAL_PRETRAIN_STEPS
+    max_epochs=5
     accelerator='gpu'
     accumulate_grad_batches=%GRAD_ACC
     num_sanity_val_steps=1
-    val_check_interval=%CHECKPOINT_INTERVAL
     precision=%PRECISION
     check_val_every_n_epoch=None
 
@@ -57,7 +54,7 @@ pl.callbacks.EarlyStopping:
     monitor="val_loss"
     min_delta=0.001
     patience=10
-    verbose=False
+    verbose=True
     mode="min"
 
 tasks.load_data.get_dataloaders:
