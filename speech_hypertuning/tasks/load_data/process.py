@@ -66,7 +66,7 @@ def dataset_random_split(df: pd.DataFrame, proportions={}):
                     a=speaker_df.index, size=v, replace=False
                 )
                 partitions_dfs[k].append(speaker_df.loc[sampled_idxs])
-                chosen_idxs += sampled_idxs
+                chosen_idxs += sampled_idxs.tolist()
 
     partitions = {}
     for k, v in proportions.items():
