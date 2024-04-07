@@ -11,7 +11,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self,
         state: Dict[str, Any],
         upstream: str = 'wavlm_base_plus',
-        upstream_layers_output_to_use: Union[str, List[int], int] = -1,
+        upstream_layers_output_to_use: Union[str, List[int], int] = 'all',
         hidden_layers: int = 2,
         hidden_dim: int = 128,
         optimizer_params: Dict[str, Any] = {},
@@ -56,8 +56,8 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         w = torch.nn.functional.softmax(self.avg_weights, dim=0)
 
         avg_hidden = torch.sum(
-            hidden[:, self.upstream_layers_output_to_use] * w[None, :, None, None],
-            dim=0,
+            hidden[:, self.upstream_layers_output_to_use] * w[None, :, None],
+            dim=1,
         )
 
         return self.out_layer(self.downstream(avg_hidden))
