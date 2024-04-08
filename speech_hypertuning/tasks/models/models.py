@@ -51,6 +51,13 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             )
         )
 
+        self.accuracy_top1 = torchmetrics.classification.Accuracy(
+            task="multiclass", num_classes=self.num_classes
+        )
+        self.accuracy_top5 = torchmetrics.classification.Accuracy(
+            task="multiclass", num_classes=self.num_classes, top_k=5
+        )
+
     def forward(self, x: torch.Tensor):
 
         hidden = self.forward_upstream(x)
@@ -98,12 +105,13 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         batch_idx: int,  # pylint: disable=unused-argument
     ) -> None:
         losses = self.calculate_loss(batch)
-        accuracy_top1 = torchmetrics.classification.Accuracy(
-            task="multiclass", num_classes=self.num_classes
-        )
-        accuracy_top5 = torchmetrics.classification.Accuracy(
-            task="multiclass", num_classes=self.num_classes, top_k=5
-        )
+
+        out = self(batch)
+        yhat = out.squeeze()
+        y = batch['class_id']
+        accuracy_top1 = self.accuracy_top1(y, yhat)
+        accuracy_top5 = self.accuracy_top5(y, yhat)
+
         self.log_results(losses, 'test')
         self.log_results(accuracy_top1, 'test', 'accuracy_top1')
         self.log_results(accuracy_top5, 'test', 'accuracy_top5')
