@@ -7,6 +7,7 @@ execute_pipeline:
         @tasks.load_data.process_classes,
         @tasks.load_data.get_dataloaders,
         @tasks.models.fit_model,
+        @tasks.models.test_model,
     ]
     execution_order = 'sequential'
 
