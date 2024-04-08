@@ -109,8 +109,8 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         out = self(batch)
         yhat = out.squeeze()
         y = batch['class_id']
-        accuracy_top1 = self.accuracy_top1(y, yhat)
-        accuracy_top5 = self.accuracy_top5(y, yhat)
+        accuracy_top1 = self.accuracy_top1(yhat, y)
+        accuracy_top5 = self.accuracy_top5(yhat, y)
 
         self.log_results(losses, 'test')
         self.log_results(accuracy_top1, 'test', 'accuracy_top1')
