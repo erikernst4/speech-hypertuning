@@ -1,7 +1,8 @@
+from datetime import datetime
 from typing import Any, Dict, List, Union
 
-from datetime import datetime
 import torch
+import torchmetrics
 from lightning import LightningModule
 from s3prl.nn import S3PRLUpstream
 
@@ -20,6 +21,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.opt_state = state
         self.optimizer_params = optimizer_params
         self.mapping = state['speaker_id_mapping']
+        self.num_classes = len(self.mapping)
 
         self.upstream = S3PRLUpstream(upstream)
         upstream_dim = self.upstream.hidden_sizes[0]
@@ -33,7 +35,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             ]
         )
         self.out_layer = torch.nn.Linear(
-            layer_dims[-1], len(self.mapping)
+            layer_dims[-1], self.num_classes
         )  # FIXME: add this at the end of the downstream?
 
         if isinstance(upstream_layers_output_to_use, int):
@@ -63,7 +65,9 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         return self.out_layer(self.downstream(avg_hidden))
 
     def forward_upstream(self, x) -> torch.Tensor:
-        if not x.get("upstream_embedding_precalculated").all().item(): # Check if all instances have the embedding precalculated
+        if (
+            not x.get("upstream_embedding_precalculated").all().item()
+        ):  # Check if all instances have the embedding precalculated
             with torch.no_grad():
                 hidden, _ = self.upstream(x['wav'], wavs_len=x['wav_lens'])
             hidden = torch.stack(hidden).transpose(0, 1)
@@ -88,16 +92,32 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         losses = self.calculate_loss(batch)
         self.log_results(losses, 'val')
 
+    def test_step(
+        self,
+        batch: torch.Tensor,
+        batch_idx: int,  # pylint: disable=unused-argument
+    ) -> None:
+        losses = self.calculate_loss(batch)
+        accuracy_top1 = torchmetrics.classification.Accuracy(
+            task="multiclass", num_classes=self.num_classes
+        )
+        accuracy_top5 = torchmetrics.classification.Accuracy(
+            task="multiclass", num_classes=self.num_classes, top_k=5
+        )
+        self.log_results(losses, 'test')
+        self.log_results(accuracy_top1, 'test', 'accuracy_top1')
+        self.log_results(accuracy_top5, 'test', 'accuracy_top5')
+
     def calculate_loss(self, x: torch.Tensor):
         out = self(x)
         yhat = out.squeeze()
         y = x['class_id']
         return torch.nn.functional.cross_entropy(yhat, y)
 
-    def log_results(self, losses, prefix) -> None:
+    def log_results(self, losses, prefix, metric="loss") -> None:
         log_loss = {
             "time": int(datetime.now().strftime('%y%m%d%H%M%S')),
-            "loss": losses,
+            metric: losses,
         }
         self.log_dict({'{}_{}'.format(prefix, k): v for k, v in log_loss.items()})
 
