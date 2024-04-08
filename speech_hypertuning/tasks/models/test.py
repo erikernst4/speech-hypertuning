@@ -65,7 +65,7 @@ def test_model(
             from_checkpoint = None
 
         test_metrics = trainer.test(
-            ckpt_path=from_checkpoint,
+            model=model,
             dataloaders=state[dataloaders_key]['validation'],
             verbose=True,
         )
