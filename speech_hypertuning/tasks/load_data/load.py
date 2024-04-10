@@ -22,7 +22,7 @@ def load_dataset(
     if not (cache and key_out in state):
         if not isinstance(reader_fn, list):
             reader_fn = [reader_fn]
-        dfs = [fn() for fn in reader_fn]
+        dfs = [fn(state=state) for fn in reader_fn]
         df = pd.concat(dfs).reset_index()
         state[key_out] = df
     else:
@@ -48,6 +48,7 @@ def load_voxceleb1_metadata(df_path: str):
 
 
 def read_audiodir(
+    state,
     dataset_path,
     subsample=None,
     dataset=None,
@@ -70,6 +71,7 @@ def read_audiodir(
     dataset_metadata: Optional[Dict[str, Any]] = None
     if dataset_metadata_csv is not None:
         dataset_metadata = dataset_metadata_loader(dataset_metadata_csv)
+        state["speakers_metadata"][dataset] = dataset_metadata
 
     if filter_list is not None:
         with open(filter_list, 'r') as f:
