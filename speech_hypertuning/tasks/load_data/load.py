@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 from random import sample
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -40,6 +40,13 @@ def load_dataset(
     return state
 
 
+def load_voxceleb1_metadata(df_path: str):
+    df = pd.read_csv(df_path, sep="\t")
+    df.set_index('VoxCeleb1 ID', inplace=True)
+    metadata = df.to_dict('index')
+    return metadata
+
+
 def read_audiodir(
     dataset_path,
     subsample=None,
@@ -48,6 +55,8 @@ def read_audiodir(
     filter_list=None,
     partition_lists=None,
     filter_mode='include',
+    dataset_metadata_csv=None,
+    dataset_metadata_loader=load_voxceleb1_metadata,
 ):
     if not isinstance(dataset_path, list):
         dataset_path = [dataset_path]
@@ -57,6 +66,10 @@ def read_audiodir(
     for p in dataset_path:
         all_files_i = list(Path(p).rglob('*.wav')) + list(Path(p).rglob('*.flac'))
         all_files.extend(all_files_i)
+
+    dataset_metadata: Optional[Dict[str, Any]] = None
+    if dataset_metadata_csv is not None:
+        dataset_metadata = dataset_metadata_loader(dataset_metadata_csv)
 
     if filter_list is not None:
         with open(filter_list, 'r') as f:
@@ -91,6 +104,10 @@ def read_audiodir(
                     regex_groups, str(f.relative_to(dataset_path[0]))
                 ).groupdict()
                 metadata.update(regex_data)
+
+                if dataset_metadata is not None and 'speaker_id' in regex_data:
+                    metadata.update(dataset_metadata['speaker_id'])
+
             rows.append(metadata)
         except Exception as e:
             print(f'Failed reading {f}. {e}')

@@ -2,4 +2,5 @@ load_dataset.reader_fn+=[@voxceleb1/read_audiodir]
 voxceleb1/read_audiodir.dataset_path='/datasets/Voxceleb1/'
 voxceleb1/read_audiodir.dataset='voxceleb1'
 voxceleb1/read_audiodir.regex_groups='wav/(?P<speaker_id>.*)/(?P<video_id>.*)/(?P<segment_id>.*).wav'
+voxceleb1/read_audiodir.dataset_metadata_csv='/datasets/Voxceleb1/vox1_meta.csv'
 tasks.load_data.process_classes.dataset_name='voxceleb1'
