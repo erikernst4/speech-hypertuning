@@ -71,7 +71,7 @@ def read_audiodir(
     dataset_metadata: Optional[Dict[str, Any]] = None
     if dataset_metadata_csv is not None:
         dataset_metadata = dataset_metadata_loader(dataset_metadata_csv)
-        state["speakers_metadata"][dataset] = dataset_metadata
+        state["speakers_metadata"] = dataset_metadata
 
     if filter_list is not None:
         with open(filter_list, 'r') as f:
@@ -162,7 +162,23 @@ def subsample_dataset(
         > k_audios
     ]
 
-    chosen_speakers = sample(population=possible_speakers, k=n_speakers)
+    # Chose equally by gender
+    male_speakers = [
+        sid
+        for sid in possible_speakers
+        if state["speakers_metadata"][sid]["Gender"] == "m"
+    ]
+    female_speakers = [
+        sid
+        for sid in possible_speakers
+        if state["speakers_metadata"][sid]["Gender"] == "f"
+    ]
+
+    n_speakers_by_gender = int(n_speakers / 2)
+    chosen_male_speakers = sample(population=male_speakers, k=n_speakers_by_gender)
+    chosen_female_speakers = sample(population=female_speakers, k=n_speakers_by_gender)
+
+    chosen_speakers = chosen_male_speakers + chosen_female_speakers
 
     # Get audios from chosen speakers
     chosen_speakers_dfs = []
