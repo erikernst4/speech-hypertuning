@@ -106,7 +106,7 @@ def read_audiodir(
                 metadata.update(regex_data)
 
                 if dataset_metadata is not None and 'speaker_id' in regex_data:
-                    metadata.update(dataset_metadata['speaker_id'])
+                    metadata.update(dataset_metadata[regex_data['speaker_id']])
 
             rows.append(metadata)
         except Exception as e:
