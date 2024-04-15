@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import pandas as pd
@@ -35,7 +35,9 @@ def get_dataloaders(
     return state
 
 
-def dataset_random_split(df: pd.DataFrame, proportions={}):
+def dataset_random_split(
+    original_df: pd.DataFrame, proportions: Dict[str, Union[int, float]] = {}
+) -> Dict[str, pd.DataFrame]:
     numerical_value = any(v > 1 for v in proportions.values())
     if numerical_value:
         prop_type = 'n'
@@ -51,8 +53,9 @@ def dataset_random_split(df: pd.DataFrame, proportions={}):
     else:
         remainder_k = None
 
+    df = original_df.copy()
+
     partitions_dfs: Dict[str, List[pd.DataFrame]] = {}
-    chosen_idxs = []
     for k, v in proportions.items():
         partitions_dfs[k] = []
         if k != remainder_k:
@@ -62,13 +65,15 @@ def dataset_random_split(df: pd.DataFrame, proportions={}):
                 if prop_type == 'prop':
                     sample_size = int(len(speaker_df) * v)
                 else:
-                    sample_size = v
+                    sample_size = int(v)
 
                 sampled_idxs = np.random.choice(
                     a=speaker_df.index, size=sample_size, replace=False
                 )
-                partitions_dfs[k].append(speaker_df.loc[sampled_idxs])
-                chosen_idxs += sampled_idxs.tolist()
+                speaker_partition_df = speaker_df.loc[sampled_idxs]
+                df = df[~df.index.isin(speaker_partition_df.index)]  # Remove chosen
+
+                partitions_dfs[k].append(speaker_partition_df)
 
     partitions = {}
     for k, v in proportions.items():
@@ -76,8 +81,7 @@ def dataset_random_split(df: pd.DataFrame, proportions={}):
             partitions[k] = pd.concat(partitions_dfs[k])
 
     if remainder_k is not None:
-        remainder_idxs = [index for index in df.index if index not in chosen_idxs]
-        partitions[remainder_k] = df.loc[remainder_idxs]
+        partitions[remainder_k] = df
 
     return partitions
 
