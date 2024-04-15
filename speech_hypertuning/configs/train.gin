@@ -26,17 +26,22 @@ val/torch.utils.data.DataLoader:
     batch_size=%VAL_BATCH_SIZE
     num_workers=%VAL_DATALOADER_NUM_WORKERS
 
+tasks.models.S3PRLUpstreamMLPDownstreamForCls:
+    optimizer_params={"lr": 1e-3}
+
 tasks.models.fit_model:
     model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
     trainer_cls=@pl.Trainer
     from_checkpoint=%INITIAL_CHECKPOINT
-    checkpoint_folder='pretrain_checkpoints'
+
+tasks.models.test_model:
+    model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
+    trainer_cls=@pl.Trainer
 
 pl.Trainer:
     logger=@pl.loggers.CSVLogger()
     devices=%DEVICE
     callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.LearningRateMonitor(), @pl.callbacks.EarlyStopping()]
-    max_epochs=5
     accelerator='gpu'
     accumulate_grad_batches=%GRAD_ACC
     num_sanity_val_steps=1
