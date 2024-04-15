@@ -22,9 +22,14 @@ train/torch.utils.data.DataLoader:
     num_workers=%TRAIN_DATALOADER_NUM_WORKERS
 
 val/torch.utils.data.DataLoader:
-    shuffle=False
+    shuffle=True
     batch_size=%VAL_BATCH_SIZE
     num_workers=%VAL_DATALOADER_NUM_WORKERS
+
+test/torch.utils.data.DataLoader:
+    shuffle=True
+    batch_size=%TEST_BATCH_SIZE
+    num_workers=%TEST_DATALOADER_NUM_WORKERS
 
 tasks.models.S3PRLUpstreamMLPDownstreamForCls:
     optimizer_params={"lr": 1e-3}
@@ -66,13 +71,13 @@ pl.callbacks.EarlyStopping:
 tasks.load_data.get_dataloaders:
     split_function=@tasks.load_data.dataset_random_split
     dataset_key_in="filtered_dataset_metadata"
-    dataset_cls={'train': @train/tasks.load_data.DictDataset, 'validation': @val/tasks.load_data.DictDataset}
-    dataloader_cls={'train': @train/torch.utils.data.DataLoader, 'validation': @val/torch.utils.data.DataLoader}
+    dataset_cls={'train': @train/tasks.load_data.DictDataset, 'validation': @val/tasks.load_data.DictDataset, 'test': @test/tasks.load_data.DictDataset}
+    dataloader_cls={'train': @train/torch.utils.data.DataLoader, 'validation': @val/torch.utils.data.DataLoader, 'test': @test/torch.utils.data.DataLoader}
 
 tasks.load_data.process_classes.dataset_key_in="filtered_dataset_metadata"
 
 tasks.load_data.dataset_random_split:
-    proportions={'train':-1,'validation':%VAL_SET_SIZE}
+    proportions={'train':-1,'validation':%VAL_SET_SIZE, 'test':%TEST_SET_SIZE}
 
 tasks.load_data.DictDataset.index_mapper=@tasks.load_data.compensate_lengths
 tasks.load_data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will sample long audios multiple times during one epoch (duration//compensate_framing times)
