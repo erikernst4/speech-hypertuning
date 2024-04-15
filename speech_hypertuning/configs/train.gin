@@ -22,17 +22,17 @@ train/torch.utils.data.DataLoader:
     num_workers=%TRAIN_DATALOADER_NUM_WORKERS
 
 val/torch.utils.data.DataLoader:
-    shuffle=True
+    shuffle=False
     batch_size=%VAL_BATCH_SIZE
     num_workers=%VAL_DATALOADER_NUM_WORKERS
 
 test/torch.utils.data.DataLoader:
-    shuffle=True
+    shuffle=False
     batch_size=%TEST_BATCH_SIZE
     num_workers=%TEST_DATALOADER_NUM_WORKERS
 
 tasks.models.S3PRLUpstreamMLPDownstreamForCls:
-    optimizer_params={"lr": 1e-3}
+    optimizer_params={"lr": 1e-4}
 
 tasks.models.fit_model:
     model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
