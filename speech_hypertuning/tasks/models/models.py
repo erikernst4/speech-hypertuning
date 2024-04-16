@@ -134,7 +134,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
     def configure_optimizers(
         self,
     ) -> Dict[str, Any]:
-        optimizer = torch.optim.Adam(params=self.parameters())
+        optimizer = self.optimizer(params=self.parameters())
         optimizer_config = {"optimizer": optimizer}
         if self.lr_scheduler is not None:
             lr_scheduler_config = {
