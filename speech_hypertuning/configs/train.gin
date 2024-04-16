@@ -31,8 +31,16 @@ test/torch.utils.data.DataLoader:
     batch_size=%TEST_BATCH_SIZE
     num_workers=%TEST_DATALOADER_NUM_WORKERS
 
+torch.lr_scheduler.ReduceLROnPlateau:
+    mode='min'
+    patience=5
+    factor=0.5
+
 tasks.models.S3PRLUpstreamMLPDownstreamForCls:
-    optimizer_params={"lr": 1e-4}
+    hidden_layers=1
+    hidden_dim=4096
+    optimizer_params={"lr": 1e-3}
+    lr_scheduler=@torch.lr_scheduler.ReduceLROnPlateau
 
 tasks.models.fit_model:
     model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
@@ -64,7 +72,7 @@ pl.loggers.CSVLogger:
 pl.callbacks.EarlyStopping:
     monitor="val_loss"
     min_delta=0.001
-    patience=10
+    patience=60
     verbose=True
     mode="min"
 

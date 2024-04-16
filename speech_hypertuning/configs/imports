@@ -4,6 +4,7 @@ lightning.pytorch.loggers: pl.loggers
 lightning.pytorch.callbacks: pl.callbacks
 torch.utils.data: torch.utils.data
 torch.optim: torch.optim
+torch.optim.lr_scheduler: torch.lr_scheduler
 torchmetrics: torchmetrics
 speech_hypertuning.tasks: tasks
 speech_hypertuning.tasks.utils: tasks.utils

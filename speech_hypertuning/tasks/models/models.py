@@ -16,10 +16,12 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         hidden_layers: int = 2,
         hidden_dim: int = 128,
         optimizer_params: Dict[str, Any] = {},
+        lr_scheduler = None,
     ):
         super().__init__()
         self.opt_state = state
         self.optimizer_params = optimizer_params
+        self.lr_scheduler = lr_scheduler
         self.mapping = state['speaker_id_mapping']
         self.num_classes = len(self.mapping)
 
@@ -129,9 +131,15 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         }
         self.log_dict({'{}_{}'.format(prefix, k): v for k, v in log_loss.items()})
 
-    def configure_optimizers(self) -> None:
+    def configure_optimizers(
+        self,
+    )-> None:
         optimizer = torch.optim.Adam(params=self.parameters(), **self.optimizer_params)
-        return torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+        optimizer_config = {"optimizer": optimizer}
+        if self.lr_scheduler is not None:
+            lr_scheduler_config = {"scheduler": self.lr_scheduler(optimizer), "monitor": "val_loss", "interval": "epoch", "frequency": 1}
+            optimizer_config['lr_scheduler'] = lr_scheduler_config
+        return optimizer_config
 
     def set_optimizer_state(self, state: Dict[str, Any]) -> None:
         self.opt_state = state
