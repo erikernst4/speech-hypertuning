@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import torch
 import torchmetrics
@@ -15,12 +15,12 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         upstream_layers_output_to_use: Union[str, List[int], int] = 'all',
         hidden_layers: int = 2,
         hidden_dim: int = 128,
-        optimizer_params: Dict[str, Any] = {},
-        lr_scheduler = None,
+        optimizer: Optional[Any] = None,
+        lr_scheduler: Optional[Any] = None,
     ):
         super().__init__()
         self.opt_state = state
-        self.optimizer_params = optimizer_params
+        self.optimizer = optimizer if optimizer is not None else torch.optim.Adam
         self.lr_scheduler = lr_scheduler
         self.mapping = state['speaker_id_mapping']
         self.num_classes = len(self.mapping)
@@ -133,11 +133,16 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
     def configure_optimizers(
         self,
-    )-> None:
-        optimizer = torch.optim.Adam(params=self.parameters(), **self.optimizer_params)
+    ) -> Dict[str, Any]:
+        optimizer = torch.optim.Adam(params=self.parameters())
         optimizer_config = {"optimizer": optimizer}
         if self.lr_scheduler is not None:
-            lr_scheduler_config = {"scheduler": self.lr_scheduler(optimizer), "monitor": "val_loss", "interval": "epoch", "frequency": 1}
+            lr_scheduler_config = {
+                "scheduler": self.lr_scheduler(optimizer),
+                "monitor": "val_loss",
+                "interval": "epoch",
+                "frequency": 1,
+            }
             optimizer_config['lr_scheduler'] = lr_scheduler_config
         return optimizer_config
 

@@ -31,6 +31,9 @@ test/torch.utils.data.DataLoader:
     batch_size=%TEST_BATCH_SIZE
     num_workers=%TEST_DATALOADER_NUM_WORKERS
 
+torch.optim.Adam:
+    lr=1e-3
+
 torch.lr_scheduler.ReduceLROnPlateau:
     mode='min'
     patience=5
@@ -39,7 +42,7 @@ torch.lr_scheduler.ReduceLROnPlateau:
 tasks.models.S3PRLUpstreamMLPDownstreamForCls:
     hidden_layers=1
     hidden_dim=4096
-    optimizer_params={"lr": 1e-3}
+    optimizer=@torch.optim.Adam
     lr_scheduler=@torch.lr_scheduler.ReduceLROnPlateau
 
 tasks.models.fit_model:
