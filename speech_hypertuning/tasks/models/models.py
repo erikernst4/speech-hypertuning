@@ -130,7 +130,8 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.log_dict({'{}_{}'.format(prefix, k): v for k, v in log_loss.items()})
 
     def configure_optimizers(self) -> None:
-        return torch.optim.Adam(params=self.parameters(), **self.optimizer_params)
+        optimizer = torch.optim.Adam(params=self.parameters(), **self.optimizer_params)
+        return torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
 
     def set_optimizer_state(self, state: Dict[str, Any]) -> None:
         self.opt_state = state
