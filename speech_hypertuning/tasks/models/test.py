@@ -57,7 +57,6 @@ def test_model(
                     )
                     from_checkpoint = None
 
-        logger.info(torchinfo.summary(model))
         if from_checkpoint is not None:
             ckpt_data = torch.load(from_checkpoint)
             model.set_optimizer_state(ckpt_data['optimizer_states'])
@@ -66,7 +65,7 @@ def test_model(
 
         test_metrics = trainer.test(
             model=model,
-            dataloaders=state[dataloaders_key]['validation'],
+            dataloaders=state[dataloaders_key]['test'],
             verbose=True,
         )
 
