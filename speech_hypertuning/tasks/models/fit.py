@@ -73,7 +73,6 @@ def fit_model(
                 ckpt_path=from_checkpoint,
             )
 
-            trainer.save_checkpoint(Path(base_dir, 'last.ckpt'))
             state[
                 model_key_out + '_checkpoint_dir'
             ] = trainer.checkpoint_callback.dirpath
