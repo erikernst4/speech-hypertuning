@@ -50,12 +50,7 @@ def test_model(
                     last_epoch = max(ckpt_epoch)
                     from_checkpoint = ckpts[ckpt_epoch.index(last_epoch)]
                 else:
-                    logger.info(
-                        'No checkpoints found in {}. Training from scratch.'.format(
-                            base_dir
-                        )
-                    )
-                    from_checkpoint = None
+                    raise ValueError(f'No checkpoints found in {base_dir}. Training from scratch.')
 
         if from_checkpoint is not None:
             ckpt_data = torch.load(from_checkpoint)
