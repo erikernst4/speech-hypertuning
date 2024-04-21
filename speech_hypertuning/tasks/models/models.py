@@ -122,6 +122,10 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         out = self(x)
         yhat = out.squeeze()
         y = x['class_id']
+
+        if len(yhat.shape) == 1:
+            yhat = yhat.unsqueeze(dim=0)
+
         return torch.nn.functional.cross_entropy(yhat, y)
 
     def log_results(self, losses, prefix, metric="loss") -> None:
