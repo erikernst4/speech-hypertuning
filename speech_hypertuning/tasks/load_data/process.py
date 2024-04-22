@@ -1,8 +1,10 @@
-from typing import Any, Dict, List, Union
+from itertools import zip_longest
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import torch
+from tqdm import tqdm
 
 
 def get_dataloaders(
@@ -38,20 +40,7 @@ def get_dataloaders(
 def dataset_random_split(
     original_df: pd.DataFrame, proportions: Dict[str, Union[int, float]] = {}
 ) -> Dict[str, pd.DataFrame]:
-    numerical_value = any(v > 1 for v in proportions.values())
-    if numerical_value:
-        prop_type = 'n'
-    else:
-        prop_type = 'prop'
-
-    # Check if remainder is used only once
-    remainder_splits = [k for k, v in proportions.items() if v == -1]
-    if len(remainder_splits) > 1:
-        raise ValueError("-1 can't be used in more than one entry")
-    elif len(remainder_splits) == 1:
-        remainder_k = remainder_splits[0]
-    else:
-        remainder_k = None
+    prop_type, remainder_k = process_proportions(proportions)
 
     df = original_df.copy()
 
@@ -191,3 +180,102 @@ def process_classes(
     state["speaker_id_mapping"] = mapping
 
     return state
+
+
+def create_splits(
+    state: Dict[str, Any],
+    proportions: Dict[str, Any],
+    output_dir: str,
+    cache: bool = True,
+) -> Dict[str, Any]:
+
+    if state["splits_created"] and cache:
+        return state
+
+    df = state['dataset_metadata'].copy()
+
+    # Sort by audio count intercalated by gender
+    sid_to_audios_count = df.groupby(['speaker_id']).size().to_dict()
+    sid_to_gender = (
+        df[['speaker_id', 'Gender']]
+        .drop_duplicates()
+        .set_index("speaker_id")
+        .to_dict()["Gender"]
+    )
+    sorted_sid_by_audios_count = [
+        sid
+        for sid, _ in sorted(
+            sid_to_audios_count.items(), key=lambda tuple: tuple[1], reverse=True
+        )
+    ]
+
+    sorted_male_sid_by_audios_count = [
+        sid for sid in sorted_sid_by_audios_count if sid_to_gender[sid] == "m"
+    ]
+    sorted_female_sid_by_audios_count = [
+        sid for sid in sorted_sid_by_audios_count if sid_to_gender[sid] == "f"
+    ]
+
+    alternated_list = []
+    for male_sid, female_sid in zip_longest(
+        sorted_male_sid_by_audios_count, sorted_female_sid_by_audios_count
+    ):
+        if male_sid is not None:
+            alternated_list.append(male_sid)
+        if female_sid is not None:
+            alternated_list.append(female_sid)
+
+    prop_type, remainder_k = process_proportions(proportions)
+
+    dfs = []
+    for speaker_id in tqdm(alternated_list):
+        for partition, v in proportions.items():
+            if partition != remainder_k:
+                speaker_df = df[df.speaker_id == speaker_id].copy()
+                speaker_df.drop("Set", axis=1, inplace=True)
+
+                if prop_type == 'prop':
+                    sample_size = int(len(speaker_df) * v)
+                else:
+                    sample_size = int(v)
+                sampled_idxs = np.random.choice(
+                    a=speaker_df.index, size=sample_size, replace=False
+                )
+                speaker_partition_df = speaker_df.loc[sampled_idxs]
+                df = df[~df.index.isin(speaker_partition_df.index)]  # Remove chosen
+                speaker_partition_df['set'] = partition
+                dfs.append(speaker_partition_df)
+
+        if remainder_k is not None:
+            speaker_partition_df = df[df.speaker_id == speaker_id].copy()
+            speaker_partition_df.drop("Set", axis=1, inplace=True)
+            speaker_partition_df['set'] = remainder_k
+            df = df[~df.index.isin(speaker_partition_df.index)]  # Remove chosen
+            dfs.append(speaker_partition_df)
+
+    splits_df = pd.concat(dfs)
+    splits_df.to_csv(output_dir + "splits.csv")
+
+    state["dataset_metadata"] = splits_df
+    state["splits_created"] = True
+
+    return state
+
+
+def process_proportions(proportions: Dict[str, Any]) -> Tuple[str, Optional[str]]:
+    numerical_value = any(v > 1 for v in proportions.values())
+    if numerical_value:
+        prop_type = 'n'
+    else:
+        prop_type = 'prop'
+
+    # Check if remainder is used only once
+    remainder_splits = [k for k, v in proportions.items() if v == -1]
+    if len(remainder_splits) > 1:
+        raise ValueError("-1 can't be used in more than one entry")
+    elif len(remainder_splits) == 1:
+        remainder_k = remainder_splits[0]
+    else:
+        remainder_k = None
+
+    return prop_type, remainder_k
