@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
+from loguru import logger
 
 
 def get_dataloaders(
@@ -40,7 +41,13 @@ def get_dataloaders(
 def dataset_random_split(
     original_df: pd.DataFrame, proportions: Dict[str, Union[int, float]] = {}
 ) -> Dict[str, pd.DataFrame]:
-    prop_type, remainder_k = process_proportions(proportions)
+    remainder_k = process_proportions(proportions)
+
+    numerical_value = any(v > 1 for v in proportions.values())
+    if numerical_value:
+        prop_type = 'n'
+    else:
+        prop_type = 'prop'
 
     df = original_df.copy()
 
@@ -49,7 +56,7 @@ def dataset_random_split(
         partitions_dfs[k] = []
         if k != remainder_k:
             for speaker_id in df["speaker_id"].unique():
-                speaker_df = df[df["speaker_id"] == speaker_id]
+                speaker_df = df[df.speaker_id == speaker_id].copy()
 
                 if prop_type == 'prop':
                     sample_size = int(len(speaker_df) * v)
@@ -188,13 +195,120 @@ def create_splits(
     output_dir: str,
     cache: bool = True,
 ) -> Dict[str, Any]:
+    logger.info("Creating splits")
 
-    if state["splits_created"] and cache:
+    if "splits_created" in state and state["splits_created"] and cache:
+        logger.info("Splits already created, using cached splits")
         return state
 
     df = state['dataset_metadata'].copy()
 
-    # Sort by audio count intercalated by gender
+    # Sort by audio count alternating by gender (so that taking in order is gender-balanced)
+    alternated_list = get_sorted_sid_list_by_audio_count_alternating_by_gender(df=df)
+
+    remainder_k = process_proportions(proportions)
+
+    dfs = []
+    for speaker_id in tqdm(alternated_list):
+        # Process sample sizes for speaker id once, because the df will get modified
+        speaker_df = df[df.speaker_id == speaker_id].copy()
+        sample_sizes = process_sample_sizes(proportions=proportions, speaker_df=speaker_df)
+
+        for partition, sample_size in sample_sizes.items():
+            if partition != remainder_k:
+                speaker_df = df[df.speaker_id == speaker_id].copy()
+                speaker_df.drop("Set", axis=1, inplace=True)
+
+                sampled_idxs = np.random.choice(
+                    a=speaker_df.index, size=sample_size, replace=False
+                )
+
+                sampled_idxs_order = sort_idx_alternating_video_ids(speaker_df=speaker_df, sampled_idxs=sampled_idxs, sample_size=sample_size)
+
+                assert len(sampled_idxs) == len(sampled_idxs_order) == sample_size
+
+                speaker_partition_df = speaker_df.loc[sampled_idxs_order]
+
+                df = df[~df.index.isin(speaker_partition_df.index)]  # Remove chosen
+                speaker_partition_df['set'] = partition
+                dfs.append(speaker_partition_df)
+
+
+        if remainder_k is not None:
+            speaker_df = df[df.speaker_id == speaker_id].copy() # Remaining speaker df
+            sampled_idxs_order = sort_idx_alternating_video_ids(speaker_df=speaker_df, sampled_idxs=speaker_df.index, sample_size=sample_sizes[remainder_k])
+            speaker_partition_df = speaker_df.loc[sampled_idxs_order]
+            speaker_partition_df.drop("Set", axis=1, inplace=True)
+            speaker_partition_df['set'] = remainder_k
+            df = df[~df.index.isin(speaker_partition_df.index)]  # Remove chosen
+            dfs.append(speaker_partition_df)
+
+    splits_df = pd.concat(dfs)
+    assert len(splits_df) == len(state['dataset_metadata'])
+    splits_df.to_csv(output_dir + "splits.csv")
+
+    state["dataset_metadata"] = splits_df
+    state["splits_created"] = True
+
+    return state
+
+
+def process_proportions(proportions: Dict[str, Any]) -> Tuple[str, Optional[str]]:
+
+    # Check if remainder is used only once
+    remainder_splits = [k for k, v in proportions.items() if v == -1]
+    if len(remainder_splits) > 1:
+        raise ValueError("-1 can't be used in more than one entry")
+    elif len(remainder_splits) == 1:
+        remainder_k = remainder_splits[0]
+    else:
+        remainder_k = None
+
+    return remainder_k
+
+
+def sort_idx_alternating_video_ids(
+    speaker_df: pd.DataFrame,
+    sampled_idxs: np.ndarray,
+    sample_size: int,
+) -> List[int]:
+    """
+    Sort indexes alternating one from each video id
+    The reason of this is to take rows in order when subsampling,
+    as having different videos is more valuable than multiple
+    segments from the same video_id
+    """
+    sampled_idxs_order = []
+    unorder_speaker_partition_df = speaker_df.loc[sampled_idxs].copy()
+    while len(sampled_idxs_order) < sample_size:
+        for video_id in unorder_speaker_partition_df.video_id.unique():
+            df_to_choose = unorder_speaker_partition_df[(unorder_speaker_partition_df.video_id == video_id) & (~unorder_speaker_partition_df.index.isin(sampled_idxs_order))]
+            if df_to_choose.empty:
+                continue
+            idx = np.random.choice(
+                a=df_to_choose.index, size=1, replace=False
+            )[0]
+            sampled_idxs_order.append(idx)
+    return sampled_idxs_order
+
+def process_sample_sizes(
+    proportions: Dict[str, Union[int, float]],
+    speaker_df: pd.DataFrame,
+) -> Dict[str, int]:
+    sample_sizes = {}
+    for partition, v in proportions.items():
+        if isinstance(v, float):
+            sample_size = int(len(speaker_df) * v)
+        elif isinstance(v, int):
+            sample_size = int(v)
+        else:
+            raise ValueError(f"Unsoported value in proportions for partition {partition}: {v}")
+        sample_sizes[partition] = sample_size
+    return sample_sizes
+
+def get_sorted_sid_list_by_audio_count_alternating_by_gender(
+    df: pd.DataFrame
+) -> List[str]:
     sid_to_audios_count = df.groupby(['speaker_id']).size().to_dict()
     sid_to_gender = (
         df[['speaker_id', 'Gender']]
@@ -225,64 +339,4 @@ def create_splits(
         if female_sid is not None:
             alternated_list.append(female_sid)
 
-    prop_type, remainder_k = process_proportions(proportions)
-
-    dfs = []
-    for speaker_id in tqdm(alternated_list):
-        sample_sizes = {}
-        speaker_df = df[df.speaker_id == speaker_id].copy()
-        for partition, v in proportions.items():
-            if prop_type == 'prop':
-                sample_size = sample_sizes[partition]
-            else:
-                sample_size = int(v)
-            sample_sizes[partition] = sample_size
-
-        for partition, v in proportions.items():
-            if partition != remainder_k:
-                speaker_df = df[df.speaker_id == speaker_id].copy()
-                speaker_df.drop("Set", axis=1, inplace=True)
-
-                sample_size = sample_sizes[partition]
-
-                sampled_idxs = np.random.choice(
-                    a=speaker_df.index, size=sample_size, replace=False
-                )
-                speaker_partition_df = speaker_df.loc[sampled_idxs]
-                df = df[~df.index.isin(speaker_partition_df.index)]  # Remove chosen
-                speaker_partition_df['set'] = partition
-                dfs.append(speaker_partition_df)
-
-        if remainder_k is not None:
-            speaker_partition_df = df[df.speaker_id == speaker_id].copy()
-            speaker_partition_df.drop("Set", axis=1, inplace=True)
-            speaker_partition_df['set'] = remainder_k
-            df = df[~df.index.isin(speaker_partition_df.index)]  # Remove chosen
-            dfs.append(speaker_partition_df)
-
-    splits_df = pd.concat(dfs)
-    splits_df.to_csv(output_dir + "splits.csv")
-
-    state["dataset_metadata"] = splits_df
-    state["splits_created"] = True
-
-    return state
-
-
-def process_proportions(proportions: Dict[str, Any]) -> Tuple[str, Optional[str]]:
-    numerical_value = any(v > 1 for v in proportions.values())
-    if numerical_value:
-        prop_type = 'n'
-    else:
-        prop_type = 'prop'
-
-    # Check if remainder is used only once
-    remainder_splits = [k for k, v in proportions.items() if v == -1]
-    if len(remainder_splits) > 1:
-        raise ValueError("-1 can't be used in more than one entry")
-    elif len(remainder_splits) == 1:
-        remainder_k = remainder_splits[0]
-    else:
-        remainder_k = None
-
-    return prop_type, remainder_k
+    return alternated_list
