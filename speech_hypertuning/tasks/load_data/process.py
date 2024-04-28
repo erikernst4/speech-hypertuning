@@ -229,15 +229,22 @@ def create_splits(
 
     dfs = []
     for speaker_id in tqdm(alternated_list):
+        sample_sizes = {}
+        speaker_df = df[df.speaker_id == speaker_id].copy()
+        for partition, v in proportions.items():
+            if prop_type == 'prop':
+                sample_size = sample_sizes[partition]
+            else:
+                sample_size = int(v)
+            sample_sizes[partition] = sample_size
+
         for partition, v in proportions.items():
             if partition != remainder_k:
                 speaker_df = df[df.speaker_id == speaker_id].copy()
                 speaker_df.drop("Set", axis=1, inplace=True)
 
-                if prop_type == 'prop':
-                    sample_size = int(len(speaker_df) * v)
-                else:
-                    sample_size = int(v)
+                sample_size = sample_sizes[partition]
+
                 sampled_idxs = np.random.choice(
                     a=speaker_df.index, size=sample_size, replace=False
                 )
