@@ -1,0 +1,9 @@
+execute_pipeline:
+    tasks = [
+        @tasks.utils.set_seed,
+        @tasks.load_data.load_dataset,
+        @tasks.load_data.create_splits,
+    ]
+    execution_order = 'sequential'
+
+tasks.utils.set_seed.seed=%SEED
