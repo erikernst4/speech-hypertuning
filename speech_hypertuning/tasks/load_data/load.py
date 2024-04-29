@@ -18,10 +18,13 @@ def load_dataset(
     cache: bool = True,
     filters: List[Any] = [],
     key_out: str = 'dataset_metadata',
+    splits_csv: Optional[str] = None,
     rename=None,
 ) -> Dict[str, Any]:
 
-    if not (cache and key_out in state):
+    if splits_csv is not None:
+        state[key_out] = pd.read_csv(splits_csv)
+    elif not (cache and key_out in state):
         if not isinstance(reader_fn, list):
             reader_fn = [reader_fn]
         dfs = [fn(state=state) for fn in reader_fn]
@@ -211,17 +214,15 @@ def subsample_dataset_with_fixed_n(
     proportions: Dict[str, float],
     out_key: str = "filtered_dataset_metadata",
 ) -> Dict[str, Any]:
+    """
+    This method requires that the splits are created with the intended logic
+    """
 
     if out_key in state:
         logger.info('Caching dataset metadata from state')
         return state
 
-    if not "splits_created" in state and state["splits_created"]:
-        raise ValueError("This method requires that the splits are created with the intended logic")
-
     dataset_df = state["dataset_metadata"].copy()
-
-    #dataset_df = dataset_df[dataset_df["duration"] < max_length]
 
     first_n_speakers = dataset_df.speaker_id.unique()[:n_speakers]
     dataset_df = dataset_df[dataset_df.speaker_id.isin(first_n_speakers)]
@@ -233,8 +234,10 @@ def subsample_dataset_with_fixed_n(
         sample_sizes = process_sample_sizes(proportions=proportions, speaker_df=speaker_df)
 
         for split, sample_size in sample_sizes.items():
-            speaker_split_df = speaker_df[speaker_df.set == split][:sample_size]
-            chosen_speakers_dfs.append(speaker_split_df)
+            speaker_split_df = speaker_df[speaker_df.set == split]
+            if len(speaker_split_df) < sample_size:
+                raise ValueError(f"Sample size bigger than the amount of audios for speaker {speaker_id}: set {split}, sample size {sample_size}.")
+            chosen_speakers_dfs.append(speaker_split_df[:sample_size])
 
     subsample_df = pd.concat(chosen_speakers_dfs)
     state[out_key] = subsample_df
