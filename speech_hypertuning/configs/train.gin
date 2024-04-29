@@ -2,7 +2,7 @@ execute_pipeline:
     tasks = [
         @tasks.utils.set_seed,
         @tasks.load_data.load_dataset,
-        @tasks.load_data.subsample_dataset,
+        @tasks.load_data.subsample_dataset_with_fixed_n,
         @tasks.models.save_upstream_embeddings,
         @tasks.load_data.process_classes,
         @tasks.load_data.get_dataloaders,
@@ -32,7 +32,7 @@ test/torch.utils.data.DataLoader:
     num_workers=%TEST_DATALOADER_NUM_WORKERS
 
 torch.optim.Adam:
-    lr=1e-3
+    lr=1e-4
 
 torch.lr_scheduler.ReduceLROnPlateau:
     mode='min'
@@ -56,7 +56,7 @@ tasks.models.test_model:
 pl.Trainer:
     logger=@pl.loggers.CSVLogger()
     devices=%DEVICE
-    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.LearningRateMonitor()]
+    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.LearningRateMonitor(), @pl.callbacks.EarlyStopping()]
     accelerator='gpu'
     accumulate_grad_batches=%GRAD_ACC
     num_sanity_val_steps=1
@@ -80,20 +80,3 @@ pl.callbacks.EarlyStopping:
     patience=60
     verbose=True
     mode="min"
-
-tasks.load_data.get_dataloaders:
-    split_function=@tasks.load_data.dataset_random_split
-    dataset_key_in="filtered_dataset_metadata"
-    dataset_cls={'train': @train/tasks.load_data.DictDataset, 'validation': @val/tasks.load_data.DictDataset, 'test': @test/tasks.load_data.DictDataset}
-    dataloader_cls={'train': @train/torch.utils.data.DataLoader, 'validation': @val/torch.utils.data.DataLoader, 'test': @test/torch.utils.data.DataLoader}
-
-tasks.load_data.process_classes.dataset_key_in="filtered_dataset_metadata"
-
-tasks.load_data.dataset_random_split:
-    proportions={'train':-1,'validation':%VAL_SET_SIZE, 'test':%TEST_SET_SIZE}
-
-tasks.load_data.DictDataset.index_mapper=@tasks.load_data.compensate_lengths
-tasks.load_data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will sample long audios multiple times during one epoch (duration//compensate_framing times)
-
-tasks.load_data.load_dataset.filters=[@tasks.load_data.remove_long_audios]
-tasks.load_data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
