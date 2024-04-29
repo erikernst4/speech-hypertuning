@@ -37,6 +37,15 @@ def get_dataloaders(
 
     return state
 
+def dataset_fixed_split(
+    original_df: pd.DataFrame,
+    proportions: Dict[str, Union[int, float]],
+) -> Dict[str, pd.DataFrame]:
+    partitions = {}
+    for split in proportions:
+        partitions[split] = original_df[original_df.set == split]
+    return partitions
+
 
 def dataset_random_split(
     original_df: pd.DataFrame, proportions: Dict[str, Union[int, float]] = {}
@@ -236,7 +245,7 @@ def create_splits(
 
         if remainder_k is not None:
             speaker_df = df[df.speaker_id == speaker_id].copy() # Remaining speaker df
-            sampled_idxs_order = sort_idx_alternating_video_ids(speaker_df=speaker_df, sampled_idxs=speaker_df.index, sample_size=sample_sizes[remainder_k])
+            sampled_idxs_order = sort_idx_alternating_video_ids(speaker_df=speaker_df, sampled_idxs=speaker_df.index, sample_size=len(speaker_df))
             speaker_partition_df = speaker_df.loc[sampled_idxs_order]
             speaker_partition_df.drop("Set", axis=1, inplace=True)
             speaker_partition_df['set'] = remainder_k
