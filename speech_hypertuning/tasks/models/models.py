@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
+import numpy as np
 import torch
 import torchmetrics
 from lightning import LightningModule
@@ -24,6 +25,11 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.lr_scheduler = lr_scheduler
         self.mapping = state['speaker_id_mapping']
         self.num_classes = len(self.mapping)
+
+        # Precalculating to calculate normalized loss
+        self.prior_distribution_entropy = -np.log(
+            1 / self.num_classes
+        )  # WARNING: Only true for balanced datasets
 
         self.upstream = S3PRLUpstream(upstream)
         upstream_dim = self.upstream.hidden_sizes[0]
@@ -60,7 +66,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             task="multiclass", num_classes=self.num_classes, top_k=5
         )
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: Dict[str, Any]):  # pylint: disable=arguments-differ
 
         hidden = self.forward_upstream(x)
 
@@ -73,9 +79,10 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
         return self.out_layer(self.downstream(avg_hidden))
 
-    def forward_upstream(self, x) -> torch.Tensor:
+    def forward_upstream(self, x: Dict[str, Any]) -> torch.Tensor:
         if (
-            not x.get("upstream_embedding_precalculated").all().item()
+            not "upstream_embedding_precalculated" in x
+            or not x["upstream_embedding_precalculated"].all().item()
         ):  # Check if all instances have the embedding precalculated
             with torch.no_grad():
                 hidden, _ = self.upstream(x['wav'], wavs_len=x['wav_lens'])
@@ -84,41 +91,38 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             hidden = x['upstream_embedding']
         return hidden
 
-    def training_step(
-        self,
-        batch: torch.Tensor,
-        batch_idx: int,  # pylint: disable=unused-argument
-    ):
+    def training_step(  # pylint: disable=arguments-differ
+        self, batch: torch.Tensor
+    ) -> torch.Tensor:
         losses = self.calculate_loss(batch)
         self.log_results(losses, 'train')
         return losses
 
-    def validation_step(
-        self,
-        batch: torch.Tensor,
-        batch_idx: int,  # pylint: disable=unused-argument
-    ):
+    def validation_step(  # pylint: disable=arguments-differ
+        self, batch: torch.Tensor
+    ) -> None:
         losses = self.calculate_loss(batch)
         self.log_results(losses, 'val')
 
-    def test_step(
-        self,
-        batch: torch.Tensor,
-        batch_idx: int,  # pylint: disable=unused-argument
+    def test_step(  # pylint: disable=arguments-differ
+        self, batch: torch.Tensor
     ) -> None:
         losses = self.calculate_loss(batch)
 
         out = self(batch)
         yhat = out.squeeze()
         y = batch['class_id']
+
         accuracy_top1 = self.accuracy_top1(yhat, y)
         accuracy_top5 = self.accuracy_top5(yhat, y)
+        normalized_loss = self.calculate_normalized_loss(losses)
 
         self.log_results(losses, 'test')
         self.log_results(accuracy_top1, 'test', 'accuracy_top1')
         self.log_results(accuracy_top5, 'test', 'accuracy_top5')
+        self.log_results(normalized_loss, 'test', 'normalized_loss')
 
-    def calculate_loss(self, x: torch.Tensor):
+    def calculate_loss(self, x: torch.Tensor) -> torch.Tensor:
         out = self(x)
         yhat = out.squeeze()
         y = x['class_id']
@@ -128,7 +132,18 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
         return torch.nn.functional.cross_entropy(yhat, y)
 
-    def log_results(self, losses, prefix, metric="loss") -> None:
+    def calculate_normalized_loss(self, loss: torch.Tensor) -> torch.Tensor:
+        """
+        Dividing the loss by the entropy of the prior distribution
+        gives us an interpretable metric for which a value larger than 1.0
+        indicates that the system is worse than a naive system.
+
+        For more information check:
+            - Ferrer, L. (2022). Analysis and Comparison of Classification Metrics. ArXiv, abs/2209.05355.
+        """
+        return loss / self.prior_distribution_entropy
+
+    def log_results(self, losses: torch.Tensor, prefix, metric="loss") -> None:
         log_loss = {
             "time": int(datetime.now().strftime('%y%m%d%H%M%S')),
             metric: losses,
