@@ -102,7 +102,10 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self, batch: torch.Tensor
     ) -> None:
         losses = self.calculate_loss(batch)
+        normalized_loss = self.calculate_normalized_loss(losses)
+
         self.log_results(losses, 'val')
+        self.log_results(normalized_loss, 'val', 'normalized_loss')
 
     def test_step(  # pylint: disable=arguments-differ
         self, batch: torch.Tensor
