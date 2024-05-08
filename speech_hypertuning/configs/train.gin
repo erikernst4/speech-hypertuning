@@ -56,27 +56,30 @@ tasks.models.test_model:
 pl.Trainer:
     logger=@pl.loggers.CSVLogger()
     devices=%DEVICE
-    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.LearningRateMonitor(), @pl.callbacks.EarlyStopping()]
+    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.EarlyStopping()]
     accelerator='gpu'
     accumulate_grad_batches=%GRAD_ACC
     num_sanity_val_steps=1
     precision=%PRECISION
+    max_epochs=-1
+    max_steps=%MAX_TRAIN_STEPS
+    val_check_interval=%CHECKPOINT_INTERVAL
     check_val_every_n_epoch=None
+    enable_progress_bar=False
 
 pl.callbacks.ModelCheckpoint:
     dirpath=%OUTPUT_DIR
     monitor="val_loss"
     mode="min"
     save_top_k=1
-    every_n_epochs=1
+    every_n_train_steps=%CHECKPOINT_INTERVAL
 
 pl.loggers.CSVLogger:
     save_dir=%OUTPUT_DIR
     name='pretrain_logs'
 
 pl.callbacks.EarlyStopping:
-    monitor="val_loss"
-    min_delta=0.001
-    patience=60
-    verbose=True
+    monitor="val_normalized_loss"
+    min_delta=0.0001
+    patience=72
     mode="min"
