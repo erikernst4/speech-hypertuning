@@ -63,7 +63,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             task="multiclass", num_classes=self.num_classes
         )
         self.accuracy_top5 = torchmetrics.classification.Accuracy(
-            task="multiclass", num_classes=self.num_classes, top_k=5
+            task="multiclass", num_classes=self.num_classes, top_k=min(5, self.num_classes)
         )
 
     def forward(self, x: Dict[str, Any]):  # pylint: disable=arguments-differ
