@@ -213,6 +213,7 @@ def subsample_dataset_with_fixed_n(
     n_speakers: int,
     proportions: Dict[str, float],
     out_key: str = "filtered_dataset_metadata",
+    max_length: float = 30.0,
 ) -> Dict[str, Any]:
     """
     This method requires that the splits are created with the intended logic
@@ -223,6 +224,8 @@ def subsample_dataset_with_fixed_n(
         return state
 
     dataset_df = state["dataset_metadata"].copy()
+
+    dataset_df = dataset_df[dataset_df["duration"] < max_length]
 
     first_n_speakers = dataset_df.speaker_id.unique()[:n_speakers]
     dataset_df = dataset_df[dataset_df.speaker_id.isin(first_n_speakers)]
