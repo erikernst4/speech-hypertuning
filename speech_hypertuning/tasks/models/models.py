@@ -8,14 +8,40 @@ from lightning import LightningModule
 from s3prl.nn import S3PRLUpstream
 
 
+class DownstreamForCls(torch.nn.Module):
+    def __init__(
+        self,
+        state: Dict[str, Any],
+        upstream_dim: int,
+        hidden_layers: int = 2,
+        hidden_dim: int = 128,
+    ):
+        super().__init__()
+        self.opt_state = state
+        self.mapping = state['speaker_id_mapping']
+        self.num_classes = len(self.mapping)
+
+        layer_dims = [upstream_dim] + [hidden_dim] * hidden_layers
+
+        self.hidden_net = torch.nn.Sequential(
+            *[
+                torch.nn.Sequential(torch.nn.Linear(dim_in, dim_out), torch.nn.ReLU())
+                for dim_in, dim_out in zip(layer_dims[:-1], layer_dims[1:])
+            ]
+        )
+        self.out_layer = torch.nn.Linear(layer_dims[-1], self.num_classes)
+
+    def forward(self, upstream_avg_hidden: torch.Tensor):
+
+        return self.out_layer(self.hidden_net(upstream_avg_hidden))
+
+
 class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
     def __init__(
         self,
         state: Dict[str, Any],
         upstream: str = 'wavlm_base_plus',
         upstream_layers_output_to_use: Union[str, List[int], int] = 'all',
-        hidden_layers: int = 2,
-        hidden_dim: int = 128,
         optimizer: Optional[Any] = None,
         lr_scheduler: Optional[Any] = None,
     ):
@@ -34,17 +60,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.upstream = S3PRLUpstream(upstream)
         upstream_dim = self.upstream.hidden_sizes[0]
 
-        layer_dims = [upstream_dim] + [hidden_dim] * hidden_layers
-
-        self.downstream = torch.nn.Sequential(
-            *[
-                torch.nn.Sequential(torch.nn.Linear(dim_in, dim_out), torch.nn.ReLU())
-                for dim_in, dim_out in zip(layer_dims[:-1], layer_dims[1:])
-            ]
-        )
-        self.out_layer = torch.nn.Linear(
-            layer_dims[-1], self.num_classes
-        )  # FIXME: add this at the end of the downstream?
+        self.downstream = DownstreamForCls(state=state, upstream_dim=upstream_dim)
 
         if isinstance(upstream_layers_output_to_use, int):
             upstream_layers_output_to_use = [upstream_layers_output_to_use]
@@ -63,7 +79,9 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             task="multiclass", num_classes=self.num_classes
         )
         self.accuracy_top5 = torchmetrics.classification.Accuracy(
-            task="multiclass", num_classes=self.num_classes, top_k=min(5, self.num_classes)
+            task="multiclass",
+            num_classes=self.num_classes,
+            top_k=min(5, self.num_classes),
         )
 
     def forward(self, x: Dict[str, Any]):  # pylint: disable=arguments-differ
@@ -77,7 +95,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             dim=1,
         )
 
-        return self.out_layer(self.downstream(avg_hidden))
+        return self.downstream(avg_hidden)
 
     def forward_upstream(self, x: Dict[str, Any]) -> torch.Tensor:
         if (
