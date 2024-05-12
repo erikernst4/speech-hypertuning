@@ -21,6 +21,17 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
         self.embedding_example = torch.load(
             os.path.dirname(os.path.realpath(__file__)) + "/data/embedding_example.pt"
         )
+        self.mocked_out = torch.tensor(
+            [
+                [
+                    0.089059010148048,
+                    -0.044047769159079,
+                    0.079848833382130,
+                    -0.053342320024967,
+                    -0.022720934823155,
+                ]
+            ]
+        )
 
     def test_forward_from_audio(self):
         waveform = torch.rand(1, 16000)
@@ -29,20 +40,7 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
 
         self.assertEqual(out.shape, torch.Size([1, 5]))
 
-        torch.testing.assert_close(
-            out,
-            torch.tensor(
-                [
-                    [
-                        0.089059010148048,
-                        -0.044047769159079,
-                        0.079848833382130,
-                        -0.053342320024967,
-                        -0.022720934823155,
-                    ]
-                ]
-            ),
-        )
+        torch.testing.assert_close(out, self.mocked_out)
 
     def test_forward_from_precalculated_upstream_embedding(self):
 
@@ -57,17 +55,7 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
 
         torch.testing.assert_close(
             out,
-            torch.tensor(
-                [
-                    [
-                        0.089059010148048,
-                        -0.044047769159079,
-                        0.079848833382130,
-                        -0.053342320024967,
-                        -0.022720934823155,
-                    ]
-                ]
-            ),
+            self.mocked_out,
             rtol=0.071,
             atol=1e-3,
         )
