@@ -44,6 +44,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         upstream_layers_output_to_use: Union[str, List[int], int] = 'all',
         optimizer: Optional[Any] = None,
         lr_scheduler: Optional[Any] = None,
+        pooling_layer: torch.nn.Module = TemporalAveragePooling(768),
     ):
         super().__init__()
         self.opt_state = state
@@ -60,7 +61,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.upstream = S3PRLUpstream(upstream)
         upstream_dim = self.upstream.hidden_sizes[0]
 
-        self.pooling = TemporalAveragePooling(upstream_dim)
+        self.pooling = pooling_layer
 
         self.downstream = DownstreamForCls(state=state, upstream_dim=upstream_dim)
 
