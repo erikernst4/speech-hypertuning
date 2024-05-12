@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torchmetrics
 from lightning import LightningModule
-from s3prl.nn import S3PRLUpstream
+from s3prl.nn import S3PRLUpstream, TemporalAveragePooling
 
 
 class DownstreamForCls(torch.nn.Module):
@@ -60,6 +60,8 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.upstream = S3PRLUpstream(upstream)
         upstream_dim = self.upstream.hidden_sizes[0]
 
+        self.pooling = TemporalAveragePooling(upstream_dim)
+
         self.downstream = DownstreamForCls(state=state, upstream_dim=upstream_dim)
 
         if isinstance(upstream_layers_output_to_use, int):
@@ -86,15 +88,16 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
     def forward(self, x: Dict[str, Any]):  # pylint: disable=arguments-differ
 
-        hidden = self.forward_upstream(x)
+        hidden, hidden_lens = self.forward_upstream(x)
+
+        pooled_hidden = self.pooling(hidden, hidden_lens)
 
         w = torch.nn.functional.softmax(self.avg_weights, dim=0)
 
         avg_hidden = torch.sum(
-            hidden[:, self.upstream_layers_output_to_use] * w[None, :, None],
+            pooled_hidden[:, self.upstream_layers_output_to_use] * w[None, :, None],
             dim=1,
         )
-
         return self.downstream(avg_hidden)
 
     def forward_upstream(self, x: Dict[str, Any]) -> torch.Tensor:
@@ -103,11 +106,15 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             or not x["upstream_embedding_precalculated"].all().item()
         ):  # Check if all instances have the embedding precalculated
             with torch.no_grad():
-                hidden, _ = self.upstream(x['wav'], wavs_len=x['wav_lens'])
+                hidden, hidden_lens = self.upstream(x['wav'], wavs_len=x['wav_lens'])
             hidden = torch.stack(hidden).transpose(0, 1)
         else:
             hidden = x['upstream_embedding']
-        return hidden
+            hidden_lens = [hidden_state.size(0) for hidden_state in hidden]
+            if len(hidden.shape) == 3:
+                hidden = hidden.unsqueeze(dim=0)
+
+        return hidden, hidden_lens
 
     def training_step(  # pylint: disable=arguments-differ
         self, batch: torch.Tensor
