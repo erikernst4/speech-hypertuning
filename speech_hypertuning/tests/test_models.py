@@ -37,10 +37,12 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
         torch.manual_seed(44)
         torch.use_deterministic_algorithms(True)
 
+        self.waveform = torch.rand(1, 16000)
+
     def test_forward_from_audio(self):
-        waveform = torch.rand(1, 16000)
-        valid_length = torch.tensor([waveform.size(1)])
-        out = self.model({'wav': waveform, 'wav_lens': valid_length})
+        valid_length = torch.tensor([self.waveform.size(1)])
+        with torch.no_grad():
+            out = self.model({'wav': self.waveform, 'wav_lens': valid_length})
 
         self.assertEqual(out.shape, torch.Size([1, 5]))
 
@@ -48,12 +50,13 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
 
     def test_forward_from_precalculated_upstream_embedding(self):
 
-        out = self.model(
-            {
-                'upstream_embedding_precalculated': torch.Tensor([True]),
-                'upstream_embedding': self.embedding_example,
-            }
-        )
+        with torch.no_grad():
+            out = self.model(
+                {
+                    'upstream_embedding_precalculated': torch.Tensor([True]),
+                    'upstream_embedding': self.embedding_example,
+                }
+            )
 
         self.assertEqual(out.shape, torch.Size([1, 5]))
 
@@ -61,3 +64,31 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
             out,
             self.mocked_out,
         )
+
+    # FIXME def test_forward_from_batch_audio(self):
+    #     waveform_batch = torch.cat([self.waveform, self.waveform])
+    #     valid_length = torch.tensor([self.waveform.size(1), self.waveform.size(1)])
+
+    #     with torch.no_grad():
+    #         out = self.model({'wav': waveform_batch, 'wav_lens': valid_length})
+
+    #     self.assertEqual(out.shape, torch.Size([2, 5]))
+
+    #     expected_output = torch.cat([self.mocked_out, self.mocked_out])
+    #     torch.testing.assert_close(out, expected_output)
+
+    def test_forward_from_batch_precalculated(self):
+        batch_embeddings = torch.cat([self.embedding_example, self.embedding_example])
+
+        with torch.no_grad():
+            out = self.model(
+                {
+                    'upstream_embedding_precalculated': torch.Tensor([True]),
+                    'upstream_embedding': batch_embeddings,
+                }
+            )
+
+        self.assertEqual(out.shape, torch.Size([2, 5]))
+
+        expected_output = torch.cat([self.mocked_out, self.mocked_out])
+        torch.testing.assert_close(out, expected_output)
