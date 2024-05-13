@@ -18,17 +18,19 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
             }
         }
         self.model = S3PRLUpstreamMLPDownstreamForCls(self.state)
+        self.model.eval()
+
         self.embedding_example = torch.load(
             os.path.dirname(os.path.realpath(__file__)) + "/data/embedding_example.pt"
         )
         self.mocked_out = torch.tensor(
             [
                 [
-                    0.087228991091251,
-                    -0.042148575186729,
-                    0.079113274812698,
-                    -0.051021523773670,
-                    -0.021729048341513,
+                    0.085182383656502,
+                    -0.041616000235081,
+                    0.078216306865215,
+                    -0.052810311317444,
+                    -0.021376919001341,
                 ]
             ]
         )
@@ -41,22 +43,28 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
 
     def test_forward_from_audio(self):
         valid_length = torch.tensor([self.waveform.size(1)])
-        with torch.no_grad():
-            out = self.model({'wav': self.waveform, 'wav_lens': valid_length})
-
+        out = self.model({'wav': self.waveform, 'wav_lens': valid_length})
+        for val in out[0]:
+            print("{:.15f}".format(val))
         self.assertEqual(out.shape, torch.Size([1, 5]))
 
         torch.testing.assert_close(out, self.mocked_out)
 
+    def test_forward_from_audio_deterministic(self):
+        valid_length = torch.tensor([self.waveform.size(1)])
+        out1 = self.model({'wav': self.waveform, 'wav_lens': valid_length})
+        out2 = self.model({'wav': self.waveform, 'wav_lens': valid_length})
+
+        torch.testing.assert_close(out1, out2)
+
     def test_forward_from_precalculated_upstream_embedding(self):
 
-        with torch.no_grad():
-            out = self.model(
-                {
-                    'upstream_embedding_precalculated': torch.Tensor([True]),
-                    'upstream_embedding': self.embedding_example,
-                }
-            )
+        out = self.model(
+            {
+                'upstream_embedding_precalculated': torch.Tensor([True]),
+                'upstream_embedding': self.embedding_example,
+            }
+        )
 
         self.assertEqual(out.shape, torch.Size([1, 5]))
 
@@ -65,28 +73,27 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
             self.mocked_out,
         )
 
-    # FIXME def test_forward_from_batch_audio(self):
-    #     waveform_batch = torch.cat([self.waveform, self.waveform])
-    #     valid_length = torch.tensor([self.waveform.size(1), self.waveform.size(1)])
+    def test_forward_from_batch_audio(self):
+        waveform_batch = torch.cat([self.waveform, self.waveform])
+        valid_length = torch.tensor([self.waveform.size(1), self.waveform.size(1)])
 
-    #     with torch.no_grad():
-    #         out = self.model({'wav': waveform_batch, 'wav_lens': valid_length})
+        with torch.no_grad():
+            out = self.model({'wav': waveform_batch, 'wav_lens': valid_length})
 
-    #     self.assertEqual(out.shape, torch.Size([2, 5]))
+        self.assertEqual(out.shape, torch.Size([2, 5]))
 
-    #     expected_output = torch.cat([self.mocked_out, self.mocked_out])
-    #     torch.testing.assert_close(out, expected_output)
+        expected_output = torch.cat([self.mocked_out, self.mocked_out])
+        torch.testing.assert_close(out, expected_output)
 
     def test_forward_from_batch_precalculated(self):
         batch_embeddings = torch.cat([self.embedding_example, self.embedding_example])
 
-        with torch.no_grad():
-            out = self.model(
-                {
-                    'upstream_embedding_precalculated': torch.Tensor([True]),
-                    'upstream_embedding': batch_embeddings,
-                }
-            )
+        out = self.model(
+            {
+                'upstream_embedding_precalculated': torch.Tensor([True]),
+                'upstream_embedding': batch_embeddings,
+            }
+        )
 
         self.assertEqual(out.shape, torch.Size([2, 5]))
 
