@@ -5,7 +5,9 @@ import numpy as np
 import torch
 import torchmetrics
 from lightning import LightningModule
-from s3prl.nn import S3PRLUpstream, TemporalAveragePooling
+from s3prl.nn import S3PRLUpstream
+
+from speech_hypertuning.tasks.models.pooling import TemporalMeanPooling
 
 
 class DownstreamForCls(torch.nn.Module):
@@ -44,7 +46,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         upstream_layers_output_to_use: Union[str, List[int], int] = 'all',
         optimizer: Optional[Any] = None,
         lr_scheduler: Optional[Any] = None,
-        pooling_layer: torch.nn.Module = TemporalAveragePooling(768),
+        pooling_layer: Optional[torch.nn.Module] = None,
     ):
         super().__init__()
         self.opt_state = state
@@ -61,7 +63,9 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.upstream = S3PRLUpstream(upstream)
         upstream_dim = self.upstream.hidden_sizes[0]
 
-        self.pooling = pooling_layer
+        self.pooling = (
+            pooling_layer if pooling_layer is not None else TemporalMeanPooling()
+        )
 
         self.downstream = DownstreamForCls(state=state, upstream_dim=upstream_dim)
 
@@ -89,9 +93,9 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
     def forward(self, x: Dict[str, Any]):  # pylint: disable=arguments-differ
 
-        hidden, hidden_lens = self.forward_upstream(x)
+        hidden = self.forward_upstream(x)
 
-        pooled_hidden = self.pooling(hidden, hidden_lens)
+        pooled_hidden = self.pooling(hidden)
 
         w = torch.nn.functional.softmax(self.avg_weights, dim=0)
 
@@ -107,15 +111,18 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             or not x["upstream_embedding_precalculated"].all().item()
         ):  # Check if all instances have the embedding precalculated
             with torch.no_grad():
-                hidden, hidden_lens = self.upstream(x['wav'], wavs_len=x['wav_lens'])
+                hidden, _ = self.upstream(x['wav'], wavs_len=x['wav_lens'])
+
+            # Out to tensor
             hidden = torch.stack(hidden).transpose(0, 1)
         else:
             hidden = x['upstream_embedding']
-            hidden_lens = [hidden_state.size(0) for hidden_state in hidden]
+
+            # Add batch size dimension if necessary
             if len(hidden.shape) == 3:
                 hidden = hidden.unsqueeze(dim=0)
 
-        return hidden, hidden_lens
+        return hidden
 
     def training_step(  # pylint: disable=arguments-differ
         self, batch: torch.Tensor

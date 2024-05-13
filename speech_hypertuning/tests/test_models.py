@@ -24,11 +24,11 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
         self.mocked_out = torch.tensor(
             [
                 [
-                    0.089059010148048,
-                    -0.044047769159079,
-                    0.079848833382130,
-                    -0.053342320024967,
-                    -0.022720934823155,
+                    0.088501535356045,
+                    -0.043360225856304,
+                    0.076865889132023,
+                    -0.049365781247616,
+                    -0.018453067168593,
                 ]
             ]
         )
@@ -56,6 +56,4 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
         torch.testing.assert_close(
             out,
             self.mocked_out,
-            rtol=0.071,
-            atol=1e-3,
         )
