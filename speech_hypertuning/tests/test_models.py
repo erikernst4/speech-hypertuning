@@ -24,14 +24,18 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
         self.mocked_out = torch.tensor(
             [
                 [
-                    0.088501535356045,
-                    -0.043360225856304,
-                    0.076865889132023,
-                    -0.049365781247616,
-                    -0.018453067168593,
+                    0.087228991091251,
+                    -0.042148575186729,
+                    0.079113274812698,
+                    -0.051021523773670,
+                    -0.021729048341513,
                 ]
             ]
         )
+
+        # Set random seeds
+        torch.manual_seed(44)
+        torch.use_deterministic_algorithms(True)
 
     def test_forward_from_audio(self):
         waveform = torch.rand(1, 16000)
