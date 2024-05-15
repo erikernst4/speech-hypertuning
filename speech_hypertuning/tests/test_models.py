@@ -98,3 +98,14 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
 
         expected_output = torch.cat([self.mocked_out, self.mocked_out])
         torch.testing.assert_close(out, expected_output)
+
+    def test_normalize_upstream_embedding(self):
+        model = S3PRLUpstreamMLPDownstreamForCls(
+            self.state, normalize_upstream_embeddings=True
+        )
+        valid_length = torch.tensor([self.waveform.size(1)])
+
+        out = model.forward_upstream({'wav': self.waveform, 'wav_lens': valid_length})
+        out_norms = out.norm(dim=3)
+
+        torch.testing.assert_close(out_norms, torch.ones(1, 13, out.size(2)))
