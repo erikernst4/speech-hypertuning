@@ -49,7 +49,7 @@ def save_upstream_embeddings(
     return state
 
 
-def extract_upstream_embedding(
+def extract_upstream_embedding_w_temporal_average_pooling(
     upstream: torch.nn.Module,
     wav: torch.Tensor,
     wav_len: torch.tensor,
@@ -63,3 +63,13 @@ def extract_upstream_embedding(
     average_embeddings = torch.mean(all_layers_hidden_states, dim=1)
 
     return average_embeddings
+
+
+def extract_upstream_embedding(
+    upstream: torch.nn.Module,
+    wav: torch.Tensor,
+    wav_len: torch.tensor,
+) -> torch.Tensor:
+    hidden_states, _ = upstream(wav, wav_len)
+
+    return torch.cat(hidden_states)  # list of embeddings to torch.Tensor

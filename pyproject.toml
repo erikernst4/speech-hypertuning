@@ -15,6 +15,7 @@ pandas = "^2.2.1"
 soundfile = "^0.12.1"
 s3prl = "^0.4.14"
 torchinfo = "^1.8.0"
+pytest = "^8.2.0"
 
 
 [build-system]
