@@ -48,6 +48,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         lr_scheduler: Optional[Any] = None,
         pooling_layer: Optional[torch.nn.Module] = None,
         frozen_upstream: Optional[bool] = None,
+        normalize_upstream_embeddings: Optional[bool] = None,
     ):
         super().__init__()
         self.opt_state = state
@@ -62,7 +63,8 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         )  # WARNING: Only true for balanced datasets
 
         self.upstream = S3PRLUpstream(upstream)
-        self.frozen_upstream = frozen_upstream if frozen_upstream is not None else True
+        self.frozen_upstream = frozen_upstream if frozen_upstream is not None else False
+        self.normalize_upstream_embeddings = normalize_upstream_embeddings if normalize_upstream_embeddings is not None else False
 
         if self.frozen_upstream:
             self.upstream.eval()
@@ -127,6 +129,9 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             # Add batch size dimension if necessary
             if len(hidden.shape) == 3:
                 hidden = hidden.unsqueeze(dim=0)
+
+        if self.normalize_upstream_embeddings:
+            hidden = torch.nn.functional.normalize(hidden, dim=3)
 
         return hidden
 
