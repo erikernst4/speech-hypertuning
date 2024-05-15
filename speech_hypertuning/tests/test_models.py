@@ -17,8 +17,7 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
                 "id5": 5,
             }
         }
-        self.model = S3PRLUpstreamMLPDownstreamForCls(self.state)
-        self.model.eval()
+        self.model = S3PRLUpstreamMLPDownstreamForCls(self.state, frozen_upstream=True)
 
         self.embedding_example = torch.load(
             os.path.dirname(os.path.realpath(__file__)) + "/data/embedding_example.pt"
