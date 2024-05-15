@@ -349,3 +349,25 @@ def get_sorted_sid_list_by_audio_count_alternating_by_gender(
             alternated_list.append(female_sid)
 
     return alternated_list
+
+def calculate_prior_distribution_entropy(
+    state: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Calculate the prior distribution of the dataset,
+    which is the negated sum of the product of
+    each speaker probability and the its logarithm.
+
+    For more information check:
+        - Ferrer, L. (2022). Analysis and Comparison of Classification Metrics. ArXiv, abs/2209.05355.
+    """
+    df = state["dataset_metadata"].copy()
+
+    # Calculating the probability of each speaker as its frequency over the dataset
+    speaker_counts = df['speaker_id'].value_counts()
+    speaker_probabilities = speaker_counts / len(df)
+
+    prior_distribution_entropy = - (speaker_probabilities.apply(lambda x: x * np.log(x)).sum())
+    state["prior_distribution_entropy"] = prior_distribution_entropy
+
+    return state

@@ -58,9 +58,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.num_classes = len(self.mapping)
 
         # Precalculating to calculate normalized loss
-        self.prior_distribution_entropy = -np.log(
-            1 / self.num_classes
-        )  # WARNING: Only true for balanced datasets
+        self.prior_distribution_entropy = state["prior_distribution_entropy"]
 
         self.upstream = S3PRLUpstream(upstream)
         self.frozen_upstream = frozen_upstream if frozen_upstream is not None else False
