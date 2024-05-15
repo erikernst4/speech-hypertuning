@@ -47,6 +47,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         optimizer: Optional[Any] = None,
         lr_scheduler: Optional[Any] = None,
         pooling_layer: Optional[torch.nn.Module] = None,
+        frozen_upstream: Optional[bool] = None,
     ):
         super().__init__()
         self.opt_state = state
@@ -61,6 +62,11 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         )  # WARNING: Only true for balanced datasets
 
         self.upstream = S3PRLUpstream(upstream)
+        self.frozen_upstream = frozen_upstream if frozen_upstream is not None else True
+
+        if self.frozen_upstream:
+            self.upstream.eval()
+
         upstream_dim = self.upstream.hidden_sizes[0]
 
         self.pooling = (
