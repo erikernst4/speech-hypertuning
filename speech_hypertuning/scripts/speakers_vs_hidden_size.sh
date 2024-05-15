@@ -1,7 +1,7 @@
 
 for speakers in 2 5 10 20 30 50 75 100 150 250 500 1000;
 do
-	for hidden_size in 1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192;
+	for hidden_size in 1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768;
 	do
 	ginpipe configs/default_parameters.gin \
 			configs/train.gin \
