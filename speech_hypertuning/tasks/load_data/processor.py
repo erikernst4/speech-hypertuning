@@ -41,10 +41,9 @@ def ProcessorReadAudio(x, state, input=None, output=None, max_length=None, mono=
     except:
         print('Failed reading {}'.format(x))
         wav = None
-    if output is None:
-        output = input
-    x[output] = wav
 
+    x["wav"] = wav
+    x["wav_lens"] = torch.Tensor([wav.shape[0]])
     return x, state
 
 
