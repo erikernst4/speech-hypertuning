@@ -43,7 +43,7 @@ def ProcessorReadAudio(x, state, input=None, output=None, max_length=None, mono=
         wav = None
 
     x["wav"] = wav
-    x["wav_lens"] = torch.Tensor([wav.shape[0]])
+    x["wav_lens"] = np.array([wav.shape[0]], dtype=int)
     return x, state
 
 
