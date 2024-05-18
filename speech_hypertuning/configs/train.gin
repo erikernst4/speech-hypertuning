@@ -2,6 +2,7 @@ execute_pipeline:
     tasks = [
         @tasks.utils.set_seed,
         @tasks.load_data.load_dataset,
+        @tasks.load_data.calculate_prior_distribution_entropy,
         @tasks.load_data.subsample_dataset_with_fixed_n,
         @tasks.models.save_upstream_embeddings,
         @tasks.load_data.process_classes,
@@ -41,7 +42,7 @@ torch.lr_scheduler.ReduceLROnPlateau:
 
 tasks.models.DownstreamForCls:
     hidden_layers=1
-    hidden_dim=4096
+    hidden_dim=32768
 
 tasks.models.S3PRLUpstreamMLPDownstreamForCls:
     optimizer=@torch.optim.Adam
