@@ -1,5 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
+import warnings
+warnings.simplefilter("ignore", UserWarning)
 
 import numpy as np
 import torch
@@ -109,6 +111,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             pooled_hidden[:, self.upstream_layers_output_to_use] * w[None, :, None],
             dim=1,
         )
+
         return self.downstream(avg_hidden)
 
     def forward_upstream(self, x: Dict[str, Any]) -> torch.Tensor:
@@ -125,7 +128,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             hidden = x['upstream_embedding']
 
             # Add batch size dimension if necessary
-            if len(hidden.shape) == 3:
+            if len(hidden.shape) == 3 and hidden.size(0) > 1:
                 hidden = hidden.unsqueeze(dim=0)
 
         if self.normalize_upstream_embeddings:
@@ -156,6 +159,8 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
         out = self(batch)
         yhat = out.squeeze()
+        if len(yhat.shape) == 1:
+            yhat = yhat.unsqueeze(dim=0)
         y = batch['class_id']
 
         accuracy_top1 = self.accuracy_top1(yhat, y)
