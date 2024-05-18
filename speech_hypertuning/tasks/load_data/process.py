@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm
 from loguru import logger
 
@@ -94,6 +95,34 @@ def dataset_random_split(
 def remove_long_audios(df, limit=10000):
     df = df.loc[df['duration'] < limit]
     return df
+
+def collate_precalculated_embeddings(batch):
+    tensors_key = "upstream_embedding"
+    batch_tensors = [item[tensors_key] for item in batch]
+
+    if len(batch_tensors[0].shape) == 4:
+        batch_tensors = [item[tensors_key].squeeze() for item in batch_tensors]
+
+    # Each item in batch_tensors is a tensor of shape (number_of_layers, number_of_frames, 768)
+    number_of_layers = batch_tensors[0].size(0)
+
+    # Separate the layers to handle them individually
+    layers = [[item[layer_idx] for item in batch_tensors] for layer_idx in range(number_of_layers)]
+
+    # Pad each layer across the batch
+    padded_layers = [pad_sequence(layer, batch_first=True) for layer in layers]
+
+    # Stack the padded layers back together
+    padded_tensors = torch.stack(padded_layers, dim=1)
+
+    res = {
+        other_key: torch.from_numpy(np.array([item[other_key] for item in batch]))
+        for other_key in batch[0] if other_key != tensors_key
+    }
+
+    res[tensors_key] = padded_tensors
+
+    return res
 
 
 def dynamic_pad_batch(x):
