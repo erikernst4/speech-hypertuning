@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import torch
+from loguru import logger
 from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm
-from loguru import logger
 
 
 def get_dataloaders(
@@ -37,6 +37,7 @@ def get_dataloaders(
     state[dataloaders_key_out] = dataloaders
 
     return state
+
 
 def dataset_fixed_split(
     original_df: pd.DataFrame,
@@ -92,9 +93,10 @@ def dataset_random_split(
     return partitions
 
 
-def remove_long_audios(df, limit=10000):
+def remove_long_audios(df: pd.DataFrame, limit: float):
     df = df.loc[df['duration'] < limit]
     return df
+
 
 def collate_precalculated_embeddings(batch):
     tensors_key = "upstream_embedding"
@@ -107,7 +109,10 @@ def collate_precalculated_embeddings(batch):
     number_of_layers = batch_tensors[0].size(0)
 
     # Separate the layers to handle them individually
-    layers = [[item[layer_idx] for item in batch_tensors] for layer_idx in range(number_of_layers)]
+    layers = [
+        [item[layer_idx] for item in batch_tensors]
+        for layer_idx in range(number_of_layers)
+    ]
 
     # Pad each layer across the batch
     padded_layers = [pad_sequence(layer, batch_first=True) for layer in layers]
@@ -117,7 +122,8 @@ def collate_precalculated_embeddings(batch):
 
     res = {
         other_key: torch.from_numpy(np.array([item[other_key] for item in batch]))
-        for other_key in batch[0] if other_key != tensors_key
+        for other_key in batch[0]
+        if other_key != tensors_key
     }
 
     res[tensors_key] = padded_tensors
@@ -250,7 +256,9 @@ def create_splits(
     for speaker_id in tqdm(alternated_list):
         # Process sample sizes for speaker id once, because the df will get modified
         speaker_df = df[df.speaker_id == speaker_id].copy()
-        sample_sizes = process_sample_sizes(proportions=proportions, speaker_df=speaker_df)
+        sample_sizes = process_sample_sizes(
+            proportions=proportions, speaker_df=speaker_df
+        )
 
         for partition, sample_size in sample_sizes.items():
             if partition != remainder_k:
@@ -261,7 +269,11 @@ def create_splits(
                     a=speaker_df.index, size=sample_size, replace=False
                 )
 
-                sampled_idxs_order = sort_idx_alternating_video_ids(speaker_df=speaker_df, sampled_idxs=sampled_idxs, sample_size=sample_size)
+                sampled_idxs_order = sort_idx_alternating_video_ids(
+                    speaker_df=speaker_df,
+                    sampled_idxs=sampled_idxs,
+                    sample_size=sample_size,
+                )
 
                 assert len(sampled_idxs) == len(sampled_idxs_order) == sample_size
 
@@ -271,10 +283,13 @@ def create_splits(
                 speaker_partition_df['set'] = partition
                 dfs.append(speaker_partition_df)
 
-
         if remainder_k is not None:
-            speaker_df = df[df.speaker_id == speaker_id].copy() # Remaining speaker df
-            sampled_idxs_order = sort_idx_alternating_video_ids(speaker_df=speaker_df, sampled_idxs=speaker_df.index, sample_size=len(speaker_df))
+            speaker_df = df[df.speaker_id == speaker_id].copy()  # Remaining speaker df
+            sampled_idxs_order = sort_idx_alternating_video_ids(
+                speaker_df=speaker_df,
+                sampled_idxs=speaker_df.index,
+                sample_size=len(speaker_df),
+            )
             speaker_partition_df = speaker_df.loc[sampled_idxs_order]
             speaker_partition_df.drop("Set", axis=1, inplace=True)
             speaker_partition_df['set'] = remainder_k
@@ -320,14 +335,16 @@ def sort_idx_alternating_video_ids(
     unorder_speaker_partition_df = speaker_df.loc[sampled_idxs].copy()
     while len(sampled_idxs_order) < sample_size:
         for video_id in unorder_speaker_partition_df.video_id.unique():
-            df_to_choose = unorder_speaker_partition_df[(unorder_speaker_partition_df.video_id == video_id) & (~unorder_speaker_partition_df.index.isin(sampled_idxs_order))]
+            df_to_choose = unorder_speaker_partition_df[
+                (unorder_speaker_partition_df.video_id == video_id)
+                & (~unorder_speaker_partition_df.index.isin(sampled_idxs_order))
+            ]
             if df_to_choose.empty:
                 continue
-            idx = np.random.choice(
-                a=df_to_choose.index, size=1, replace=False
-            )[0]
+            idx = np.random.choice(a=df_to_choose.index, size=1, replace=False)[0]
             sampled_idxs_order.append(idx)
     return sampled_idxs_order
+
 
 def process_sample_sizes(
     proportions: Dict[str, Union[int, float]],
@@ -340,12 +357,15 @@ def process_sample_sizes(
         elif isinstance(v, int):
             sample_size = int(v)
         else:
-            raise ValueError(f"Unsoported value in proportions for partition {partition}: {v}")
+            raise ValueError(
+                f"Unsoported value in proportions for partition {partition}: {v}"
+            )
         sample_sizes[partition] = sample_size
     return sample_sizes
 
+
 def get_sorted_sid_list_by_audio_count_alternating_by_gender(
-    df: pd.DataFrame
+    df: pd.DataFrame,
 ) -> List[str]:
     sid_to_audios_count = df.groupby(['speaker_id']).size().to_dict()
     sid_to_gender = (
@@ -379,6 +399,7 @@ def get_sorted_sid_list_by_audio_count_alternating_by_gender(
 
     return alternated_list
 
+
 def calculate_prior_distribution_entropy(
     state: Dict[str, Any],
 ) -> Dict[str, Any]:
@@ -396,7 +417,9 @@ def calculate_prior_distribution_entropy(
     speaker_counts = df['speaker_id'].value_counts()
     speaker_probabilities = speaker_counts / len(df)
 
-    prior_distribution_entropy = - (speaker_probabilities.apply(lambda x: x * np.log(x)).sum())
+    prior_distribution_entropy = -(
+        speaker_probabilities.apply(lambda x: x * np.log(x)).sum()
+    )
     state["prior_distribution_entropy"] = prior_distribution_entropy
 
     return state
