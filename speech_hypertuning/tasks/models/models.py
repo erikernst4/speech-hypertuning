@@ -1,6 +1,7 @@
+import warnings
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
-import warnings
+
 warnings.simplefilter("ignore", UserWarning)
 
 import numpy as np
@@ -64,7 +65,11 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
         self.upstream = S3PRLUpstream(upstream)
         self.frozen_upstream = frozen_upstream if frozen_upstream is not None else False
-        self.normalize_upstream_embeddings = normalize_upstream_embeddings if normalize_upstream_embeddings is not None else False
+        self.normalize_upstream_embeddings = (
+            normalize_upstream_embeddings
+            if normalize_upstream_embeddings is not None
+            else False
+        )
 
         if self.frozen_upstream:
             self.upstream.eval()
@@ -100,10 +105,9 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         )
 
     def forward(self, x: Dict[str, Any]):  # pylint: disable=arguments-differ
+        hidden, hidden_lens = self.forward_upstream(x)
 
-        hidden = self.forward_upstream(x)
-
-        pooled_hidden = self.pooling(hidden)
+        pooled_hidden = self.pooling(hidden, hidden_lens)
 
         w = torch.nn.functional.softmax(self.avg_weights, dim=0)
 
@@ -120,7 +124,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             or not x["upstream_embedding_precalculated"].all().item()
         ):  # Check if all instances have the embedding precalculated
             with torch.no_grad():
-                hidden, _ = self.upstream(x['wav'], wavs_len=x['wav_lens'])
+                hidden, hidden_lens = self.upstream(x['wav'], wavs_len=x['wav_lens'])
 
             # Out to tensor
             hidden = torch.stack(hidden).transpose(0, 1)
@@ -134,7 +138,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         if self.normalize_upstream_embeddings:
             hidden = torch.nn.functional.normalize(hidden, dim=3)
 
-        return hidden
+        return hidden, hidden_lens
 
     def training_step(  # pylint: disable=arguments-differ
         self, batch: torch.Tensor
