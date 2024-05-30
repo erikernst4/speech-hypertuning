@@ -1,0 +1,3 @@
+tasks.load_data.DictDataset:
+    out_cols=['class_id', 'upstream_embedding', 'upstream_embedding_precalculated']
+    preprocessors=[@tasks.load_data.ProcessorLoadUpstreamEmbedding]

@@ -1,0 +1,14 @@
+tasks.load_data.DictDataset:
+    out_cols=['class_id', 'wav', 'wav_lens']
+    preprocessors=[@tasks.load_data.ProcessorReadAudio]
+
+tasks.load_data.ProcessorReadAudio:
+    input = 'filename'
+    max_length = %MAX_AUDIO_DURATION
+    output = 'wav'
+
+train/torch.utils.data.DataLoader:
+    collate_fn=@tasks.load_data.dynamic_pad_batch
+
+val/torch.utils.data.DataLoader:
+    collate_fn=@tasks.load_data.dynamic_pad_batch

@@ -3,8 +3,6 @@ execute_pipeline:
         @tasks.utils.set_seed,
         @tasks.load_data.load_dataset,
         @tasks.load_data.calculate_prior_distribution_entropy,
-        @tasks.load_data.subsample_dataset_with_fixed_n,
-        @tasks.models.save_upstream_embeddings,
         @tasks.load_data.process_classes,
         @tasks.load_data.get_dataloaders,
         @tasks.models.fit_model,
@@ -15,12 +13,14 @@ execute_pipeline:
 tasks.utils.set_seed.seed=%SEED
 
 tasks.models.save_upstream_embeddings:
-    saving_path = "/home/eernst/Voxceleb1/avg_embeddings"
+    saving_path = "/home/eernst/Voxceleb1/mean+std_embeddings"
+    df_key="dataset_metadata"
 
 train/torch.utils.data.DataLoader:
     shuffle=True
     batch_size=%TRAIN_BATCH_SIZE
     num_workers=%TRAIN_DATALOADER_NUM_WORKERS
+
 
 val/torch.utils.data.DataLoader:
     shuffle=False
@@ -84,5 +84,5 @@ pl.loggers.CSVLogger:
 pl.callbacks.EarlyStopping:
     monitor="val_normalized_loss"
     min_delta=0.0001
-    patience=72
+    patience=10
     mode="min"

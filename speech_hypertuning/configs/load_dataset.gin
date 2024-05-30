@@ -1,14 +1,5 @@
 PROPORTIONS={'train':-1,'validation':%VAL_SET_SIZE, 'test':%TEST_SET_SIZE}
 
-tasks.load_data.DictDataset:
-    out_cols=['class_id', 'upstream_embedding', 'upstream_embedding_precalculated']
-    preprocessors=[@tasks.load_data.ProcessorLoadUpstreamEmbedding]
-
-tasks.load_data.ProcessorReadAudio:
-    input = 'filename'
-    max_length = %MAX_AUDIO_DURATION
-    output = 'wav'
-
 tasks.load_data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
 
 tasks.load_data.subsample_dataset:
@@ -18,11 +9,11 @@ tasks.load_data.subsample_dataset:
 
 tasks.load_data.get_dataloaders:
     split_function=@tasks.load_data.dataset_fixed_split
-    dataset_key_in="filtered_dataset_metadata"
+    dataset_key_in="dataset_metadata"
     dataset_cls={'train': @train/tasks.load_data.DictDataset, 'validation': @val/tasks.load_data.DictDataset, 'test': @test/tasks.load_data.DictDataset}
     dataloader_cls={'train': @train/torch.utils.data.DataLoader, 'validation': @val/torch.utils.data.DataLoader, 'test': @test/torch.utils.data.DataLoader}
 
-tasks.load_data.process_classes.dataset_key_in="filtered_dataset_metadata"
+tasks.load_data.process_classes.dataset_key_in="dataset_metadata"
 
 tasks.load_data.dataset_random_split:
     proportions=%PROPORTIONS
@@ -32,7 +23,7 @@ tasks.load_data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will s
 
 tasks.load_data.load_dataset:
     filters=[@tasks.load_data.remove_long_audios]
-    splits_csv="/home/eernst/Voxceleb1/splits.csv"
+    splits_csv="/home/eernst/Voxceleb1/official_splits.csv"
 
 tasks.load_data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
 
