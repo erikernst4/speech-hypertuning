@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import torch
 import torchaudio
@@ -10,18 +10,18 @@ from tqdm import tqdm
 def save_upstream_embeddings(
     state: Dict[str, Any],
     saving_path: str,
-    upstream: str = 'wavlm_base_plus',
+    upstream_name: str = 'wavlm_base_plus',
     df_key: str = "filtered_dataset_metadata",
     cached_df: bool = True,
     cached_embeddings: bool = True,
-    extract_embedding_method: Optional[callable] = None,
+    extract_embedding_method: Optional[Callable] = None,
 ) -> Dict[str, Any]:
     extract_embedding_method = (
         extract_embedding_method
         if extract_embedding_method is not None
         else extract_upstream_embedding
     )
-    upstream = S3PRLUpstream(upstream)
+    upstream = S3PRLUpstream(upstream_name)
     upstream.eval()
 
     os.makedirs(saving_path, exist_ok=True)
