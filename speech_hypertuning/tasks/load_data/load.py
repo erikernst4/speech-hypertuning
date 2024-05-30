@@ -234,12 +234,16 @@ def subsample_dataset_with_fixed_n(
     chosen_speakers_dfs = []
     for speaker_id in dataset_df.speaker_id.unique():
         speaker_df = dataset_df[dataset_df.speaker_id == speaker_id].copy()
-        sample_sizes = process_sample_sizes(proportions=proportions, speaker_df=speaker_df)
+        sample_sizes = process_sample_sizes(
+            proportions=proportions, speaker_df=speaker_df
+        )
 
         for split, sample_size in sample_sizes.items():
             speaker_split_df = speaker_df[speaker_df.set == split]
             if len(speaker_split_df) < sample_size:
-                raise ValueError(f"Sample size bigger than the amount of audios for speaker {speaker_id}: set {split}, sample size {sample_size}.")
+                raise ValueError(
+                    f"Sample size bigger than the amount of audios for speaker {speaker_id}: set {split}, sample size {sample_size}."
+                )
             chosen_speakers_dfs.append(speaker_split_df[:sample_size])
 
     subsample_df = pd.concat(chosen_speakers_dfs)

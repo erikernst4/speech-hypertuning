@@ -73,9 +73,9 @@ def fit_model(
                 ckpt_path=from_checkpoint,
             )
 
-            state[
-                model_key_out + '_checkpoint_dir'
-            ] = trainer.checkpoint_callback.dirpath
+            state[model_key_out + '_checkpoint_dir'] = (
+                trainer.checkpoint_callback.dirpath
+            )
             best_model_path = model.trainer.checkpoint_callback.best_model_path
             if (best_model_path is not None) and (best_model_path != ''):
                 model.load_state_dict(torch.load(best_model_path)['state_dict'])
