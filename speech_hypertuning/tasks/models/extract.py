@@ -16,7 +16,11 @@ def save_upstream_embeddings(
     cached_embeddings: bool = True,
     extract_embedding_method: Optional[callable] = None,
 ) -> Dict[str, Any]:
-    extract_embedding_method = extract_embedding_method if extract_embedding_method is not None else extract_upstream_embedding 
+    extract_embedding_method = (
+        extract_embedding_method
+        if extract_embedding_method is not None
+        else extract_upstream_embedding
+    )
     upstream = S3PRLUpstream(upstream)
     upstream.eval()
 
@@ -87,6 +91,7 @@ def extract_upstream_embedding_w_temporal_statistics_pooling(
     pooled_embeddings = torch.cat([average_embeddings, std_embeddings], dim=-1)
     return pooled_embeddings
 
+
 def extract_upstream_embedding_w_temporal_minmax_pooling(
     upstream: torch.nn.Module,
     wav: torch.Tensor,
@@ -102,6 +107,7 @@ def extract_upstream_embedding_w_temporal_minmax_pooling(
 
     pooled_embeddings = torch.cat([min_embeddings, max_embeddings], dim=-1)
     return pooled_embeddings
+
 
 def extract_upstream_embedding(
     upstream: torch.nn.Module,
