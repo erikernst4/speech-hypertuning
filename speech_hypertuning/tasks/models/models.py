@@ -50,8 +50,10 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         optimizer: Optional[Any] = None,
         lr_scheduler: Optional[Any] = None,
         pooling_layer: Optional[torch.nn.Module] = None,
+        skip_pooling: Optional[bool] = None,
         frozen_upstream: Optional[bool] = None,
         normalize_upstream_embeddings: Optional[bool] = None,
+        normalization_method: Optional[str] = None,
     ):
         super().__init__()
         self.opt_state = state
@@ -65,11 +67,18 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
         self.upstream = S3PRLUpstream(upstream)
         self.frozen_upstream = frozen_upstream if frozen_upstream is not None else False
+
+        # Normalization variables
         self.normalize_upstream_embeddings = (
             normalize_upstream_embeddings
             if normalize_upstream_embeddings is not None
             else False
         )
+        self.normalization_method = normalization_method
+        self.register_buffer(
+            "dataset_mean", state.get('dataset_mean', torch.tensor([]))
+        )
+        self.register_buffer("dataset_std", state.get('dataset_std', torch.tensor([])))
 
         if self.frozen_upstream:
             self.upstream.eval()
@@ -77,10 +86,15 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         upstream_dim = self.upstream.hidden_sizes[0]
 
         self.pooling = (
-            pooling_layer if pooling_layer is not None else TemporalMeanPooling()
+            pooling_layer(upstream_dim)
+            if pooling_layer is not None
+            else TemporalMeanPooling(upstream_dim)
         )
+        self.skip_pooling = skip_pooling if skip_pooling is not None else False
 
-        self.downstream = DownstreamForCls(state=state, upstream_dim=upstream_dim)
+        self.downstream = DownstreamForCls(
+            state=state, upstream_dim=self.pooling.output_size
+        )
 
         if isinstance(upstream_layers_output_to_use, int):
             upstream_layers_output_to_use = [upstream_layers_output_to_use]
@@ -105,18 +119,39 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         )
 
     def forward(self, x: Dict[str, Any]):  # pylint: disable=arguments-differ
-        hidden, hidden_lens = self.forward_upstream(x)
 
-        pooled_hidden = self.pooling(hidden, hidden_lens)
+        upstream_embedding = self.extract_upstream_embedding(x)
 
+        return self.downstream(upstream_embedding)
+
+    def extract_upstream_embedding(self, x: Dict[str, Any]):
+        # Forward upstream
+        hidden, hidden_lens = self.forward_upstream(
+            x
+        )  # (batch_size, upstream_layer, frames, upstream_hidden_dim)
+
+        # Summarize frames dimension if necessary
+        pooled_hidden = (
+            hidden if self.skip_pooling else self.pooling(hidden, hidden_lens)
+        )  # (batch_size, upstream_layer, upstream_hidden_dim)
+
+        # Normalize features
+        if self.normalize_upstream_embeddings:
+            if self.normalization_method == "standard_normalization":
+                hidden = torch.nn.functional.normalize(hidden, dim=-1)
+            elif self.normalization_method == "dataset_scaling":
+                hidden -= self.dataset_mean
+                hidden /= self.dataset_std
+
+        # Summarize layers embeddings
         w = torch.nn.functional.softmax(self.avg_weights, dim=0)
 
         avg_hidden = torch.sum(
             pooled_hidden[:, self.upstream_layers_output_to_use] * w[None, :, None],
             dim=1,
-        )
+        )  # (batch_size, upstream_hidden_dim)
 
-        return self.downstream(avg_hidden)
+        return avg_hidden
 
     def forward_upstream(self, x: Dict[str, Any]) -> torch.Tensor:
         if (
@@ -128,15 +163,12 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
             # Out to tensor
             hidden = torch.stack(hidden).transpose(0, 1)
+            hidden_lens = hidden_lens[
+                0
+            ]  # Before it's a list of length=upstream_layers, all elements are equal
         else:
             hidden = x['upstream_embedding']
-
-            # Add batch size dimension if necessary
-            if len(hidden.shape) == 3 and hidden.size(0) > 1:
-                hidden = hidden.unsqueeze(dim=0)
-
-        if self.normalize_upstream_embeddings:
-            hidden = torch.nn.functional.normalize(hidden, dim=3)
+            hidden_lens = None
 
         return hidden, hidden_lens
 
@@ -144,7 +176,10 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self, batch: torch.Tensor
     ) -> torch.Tensor:
         losses = self.calculate_loss(batch)
+        normalized_loss = self.calculate_normalized_loss(losses)
+
         self.log_results(losses, 'train')
+        self.log_results(normalized_loss, 'train', 'normalized_loss')
         return losses
 
     def validation_step(  # pylint: disable=arguments-differ
