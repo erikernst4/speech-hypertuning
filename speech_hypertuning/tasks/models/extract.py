@@ -266,7 +266,6 @@ def calculate_dataset_pooled_mean_and_std(
     state,
     train_dataloader,
     saving_path: str,
-    upstream_name: str = 'wavlm_base_plus',
     cached: bool = True,
 ):
     mean_saving_path = os.path.join(saving_path, f'dataset_mean.pt')
@@ -278,9 +277,6 @@ def calculate_dataset_pooled_mean_and_std(
         state['dataset_mean'] = torch.load(mean_saving_path, weights_only=True)
         state['dataset_std'] = torch.load(std_saving_path, weights_only=True)
         return state
-
-    upstream = S3PRLUpstream(upstream_name)
-    upstream.eval()
 
     scaler = StandardScaler(with_mean=True, with_std=True)
 
