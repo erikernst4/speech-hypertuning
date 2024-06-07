@@ -63,6 +63,7 @@ def save_upstream_embeddings(
         torch.save(embeddings, embedding_saving_path)
 
     state[df_key]["embedding_filename"] = embeddings_paths
+
     return state
 
 
@@ -248,6 +249,49 @@ def calculate_dataset_upstream_mean_and_std(
             batch_embeddings = get_embeddings_wo_padding(hidden, hidden_lens)
 
             scaler.partial_fit(batch_embeddings)
+
+    dataset_mean = torch.from_numpy(scaler.mean_)
+    dataset_std = torch.from_numpy(np.sqrt(scaler.var_))
+
+    state['dataset_mean'] = dataset_mean.to("cuda:0")
+    state['dataset_std'] = dataset_std.to("cuda:0")
+
+    torch.save(dataset_mean, mean_saving_path)
+    torch.save(dataset_std, std_saving_path)
+
+    return state
+
+
+def calculate_dataset_pooled_mean_and_std(
+    state,
+    train_dataloader,
+    saving_path: str,
+    upstream_name: str = 'wavlm_base_plus',
+    cached: bool = True,
+):
+    mean_saving_path = os.path.join(saving_path, f'dataset_mean.pt')
+    std_saving_path = os.path.join(saving_path, f'dataset_std.pt')
+
+    if cached and (
+        os.path.exists(mean_saving_path) and os.path.exists(std_saving_path)
+    ):
+        state['dataset_mean'] = torch.load(mean_saving_path, weights_only=True)
+        state['dataset_std'] = torch.load(std_saving_path, weights_only=True)
+        return state
+
+    upstream = S3PRLUpstream(upstream_name)
+    upstream.eval()
+
+    scaler = StandardScaler(with_mean=True, with_std=True)
+
+    train_dataloader = state['dataloaders']['train']
+    for batch in tqdm(train_dataloader):
+        batch_embeddings = batch['upstream_embedding'].detach().numpy()
+        batch_size, upstream_layers, embedding_dim = batch_embeddings.shape
+        batch_embeddings = batch_embeddings.reshape(
+            batch_size * upstream_layers, embedding_dim
+        )
+        scaler.partial_fit(batch_embeddings)
 
     dataset_mean = torch.from_numpy(scaler.mean_)
     dataset_std = torch.from_numpy(np.sqrt(scaler.var_))
