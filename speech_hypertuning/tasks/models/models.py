@@ -130,18 +130,13 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             x
         )  # (batch_size, upstream_layer, frames, upstream_hidden_dim)
 
-        # Summarize frames dimension if necessary
-        pooled_hidden = (
-            hidden if self.skip_pooling else self.pooling(hidden, hidden_lens)
-        )  # (batch_size, upstream_layer, upstream_hidden_dim)
-
-        # Normalize features
-        if self.normalize_upstream_embeddings:
-            if self.normalization_method == "standard_normalization":
-                hidden = torch.nn.functional.normalize(hidden, dim=-1)
-            elif self.normalization_method == "dataset_scaling":
-                hidden -= self.dataset_mean
-                hidden /= self.dataset_std
+        # Summarize frames dimension if necessary (batch_size, upstream_layer, upstream_hidden_dim)
+        if self.skip_pooling:
+            pooled_hidden = hidden
+            pooled_hidden = self.normalize_features(pooled_hidden)
+        else:
+            normalized_hidden = self.normalize_features(hidden)
+            pooled_hidden = self.pooling(normalized_hidden, hidden_lens)
 
         # Summarize layers embeddings
         w = torch.nn.functional.softmax(self.avg_weights, dim=0)
@@ -171,6 +166,15 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             hidden_lens = None
 
         return hidden, hidden_lens
+
+    def normalize_features(self, xs: torch.Tensor):
+        if self.normalize_upstream_embeddings:
+            if self.normalization_method == "standard_normalization":
+                xs = torch.nn.functional.normalize(xs, dim=-1)
+            elif self.normalization_method == "dataset_scaling":
+                xs -= self.dataset_mean
+                xs /= self.dataset_std
+        return xs
 
     def training_step(  # pylint: disable=arguments-differ
         self, batch: torch.Tensor
