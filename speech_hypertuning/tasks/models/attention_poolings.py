@@ -1,3 +1,4 @@
+import math
 from typing import Optional
 
 import torch
@@ -9,6 +10,7 @@ class AttentionPooling(torch.nn.Module):
     def __init__(self, input_size: int):
         super().__init__()
         self.attention = None
+        self.pos_encoder = None
         self.input_size = input_size
         self.output_size = input_size
 
@@ -27,6 +29,9 @@ class AttentionPooling(torch.nn.Module):
 
         # Reshape to (batch_size * upstream_layers, frames, embed_dim)
         xs = xs.reshape(batch_size * upstream_layers, frames, embed_dim)
+
+        if self.pos_encoder is not None:
+            xs = self.pos_encoder(xs)
 
         attn_output = self.attention(
             xs, padding_mask
@@ -52,7 +57,7 @@ class AttentionPooling(torch.nn.Module):
         max_len = frames
 
         # Create the attention mask based on xs_len
-        mask_base = torch.arange(max_len).expand(batch_size, max_len).to('cuda')
+        mask_base = torch.arange(max_len).expand(batch_size, max_len).to("cuda")
         mask = mask_base >= xs_len.unsqueeze(1)
 
         # Expand the mask to match the shape (batch_size * upstream_layers, max_len)
@@ -152,7 +157,37 @@ class SelfAttentionLayer(torch.nn.Module):
         return attn_output
 
 
+class PositionalEncoding(torch.nn.Module):
+    def __init__(self, embed_dim, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        pe = torch.zeros(max_len, embed_dim)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(
+            torch.arange(0, embed_dim, 2).float() * (-math.log(10000.0) / embed_dim)
+        )
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)  # shape: (1, max_len, embed_dim)
+        self.register_buffer('pe', pe)
+
+    def forward(self, xs):
+        """
+        Adds positional encoding to the input.
+
+        Args:
+            xs (torch.Tensor): Input tensor (#batch * #hidden_states, #frames, hidden_dim).
+        Returns:
+            torch.Tensor: Output tensor #batch * #hidden_states, #frames, hidden_dim)
+        """
+        seq_len = xs.size(1)
+        xs = xs + self.pe[:, :seq_len]
+        return xs
+
+
 class SelfAttentionPooling(AttentionPooling):
-    def __init__(self, input_size: int):
+    def __init__(self, input_size: int, use_positional_encoding: Optional[bool] = None):
         super().__init__(input_size)
         self.attention = SelfAttentionLayer(input_size)
+        self.pos_encoder = (
+            PositionalEncoding(input_size) if use_positional_encoding else None
+        )
