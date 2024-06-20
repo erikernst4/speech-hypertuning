@@ -158,7 +158,12 @@ class SelfAttentionLayer(torch.nn.Module):
 
 
 class PositionalEncoding(torch.nn.Module):
-    def __init__(self, embed_dim, max_len=5000):
+    def __init__(
+        self,
+        embed_dim: int,
+        max_len: int = 5000,
+        dropout: float = 0.1,
+    ):
         super(PositionalEncoding, self).__init__()
         pe = torch.zeros(max_len, embed_dim)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
@@ -169,6 +174,7 @@ class PositionalEncoding(torch.nn.Module):
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)  # shape: (1, max_len, embed_dim)
         self.register_buffer('pe', pe)
+        self.dropout = torch.nn.Dropout(p=dropout)
 
     def forward(self, xs):
         """
@@ -181,7 +187,7 @@ class PositionalEncoding(torch.nn.Module):
         """
         seq_len = xs.size(1)
         xs = xs + self.pe[:, :seq_len]
-        return xs
+        return self.dropout(xs)
 
 
 class SelfAttentionPooling(AttentionPooling):
