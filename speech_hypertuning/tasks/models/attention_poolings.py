@@ -7,12 +7,14 @@ from .summarymixing import SummaryMixing
 
 
 class AttentionPooling(torch.nn.Module):
-    def __init__(self, input_size: int):
+    def __init__(self, input_size: int, dropout: Optional[float] = None):
         super().__init__()
         self.attention = None
         self.pos_encoder = None
         self.input_size = input_size
         self.output_size = input_size
+
+        self.dropout = torch.nn.Dropout(p=dropout) if dropout is not None else None
 
     def forward(self, xs: torch.Tensor, xs_len: torch.LongTensor):
         """
@@ -32,6 +34,9 @@ class AttentionPooling(torch.nn.Module):
 
         if self.pos_encoder is not None:
             xs = self.pos_encoder(xs)
+
+        if self.dropout is not None:
+            xs = self.dropout(xs)
 
         attn_output = self.attention(
             xs, padding_mask
@@ -174,7 +179,6 @@ class PositionalEncoding(torch.nn.Module):
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)  # shape: (1, max_len, embed_dim)
         self.register_buffer('pe', pe)
-        self.dropout = torch.nn.Dropout(p=dropout)
 
     def forward(self, xs):
         """
@@ -186,8 +190,7 @@ class PositionalEncoding(torch.nn.Module):
             torch.Tensor: Output tensor #batch * #hidden_states, #frames, hidden_dim)
         """
         seq_len = xs.size(1)
-        xs = xs + self.pe[:, :seq_len]
-        return self.dropout(xs)
+        return xs + self.pe[:, :seq_len]
 
 
 class SelfAttentionPooling(AttentionPooling):
