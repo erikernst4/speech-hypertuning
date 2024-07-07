@@ -57,5 +57,6 @@ def ProcessorLoadUpstreamEmbedding(
             embedding_path,
             weights_only=True,
         )
+        x['upstream_embedding'] = x['upstream_embedding'].to("cuda")
     x["upstream_embedding_precalculated"] = True
     return x, state
