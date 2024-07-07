@@ -7,7 +7,9 @@ from .summarymixing import SummaryMixing
 
 
 class AttentionPooling(torch.nn.Module):
-    def __init__(self, input_size: int, dropout: Optional[float] = None):
+    def __init__(
+        self, input_size: int, *args, dropout: Optional[float] = None, **kwargs
+    ):
         super().__init__()
         self.attention = None
         self.pos_encoder = None
@@ -56,10 +58,10 @@ class AttentionPooling(torch.nn.Module):
     ) -> Optional[torch.Tensor]:
         batch_size, upstream_layers, frames, embed_dim = xs.size()
 
-        if batch_size == 1:
-            return None
-
         max_len = frames
+
+        if batch_size == 1 or (xs_len == max_len).all():
+            return None
 
         # Create the attention mask based on xs_len
         mask_base = torch.arange(max_len).expand(batch_size, max_len).to("cuda")
@@ -75,9 +77,18 @@ class AttentionPooling(torch.nn.Module):
 
 
 class SummaryMixingPooling(AttentionPooling):
-    def __init__(self, input_size: int):
-        super().__init__(input_size)
-        self.attention = SummaryMixing(enc_dim=input_size, summary_out_dim=input_size)
+    def __init__(
+        self, input_size: int, *args, num_heads: Optional[int] = None, **kwargs
+    ):
+        super().__init__(input_size, *args, **kwargs)
+        num_heads = num_heads if num_heads is not None else 8
+        self.attention = SummaryMixing(
+            enc_dim=input_size,
+            summary_out_dim=input_size,
+            nhead=num_heads,
+            *args,
+            **kwargs,
+        )
 
 
 class TransformerLayer(torch.nn.Module):
@@ -125,16 +136,18 @@ class TransformerLayer(torch.nn.Module):
 
 
 class TransformerPooling(AttentionPooling):
-    def __init__(self, input_size: int):
-        super().__init__(input_size)
-        self.attention = TransformerLayer(input_size)
+    def __init__(self, input_size: int, *args, **kwargs):
+        super().__init__(input_size, *args, **kwargs)
+        self.attention = TransformerLayer(input_size, *args, **kwargs)
 
 
 class SelfAttentionLayer(torch.nn.Module):
     def __init__(
         self,
         embed_dim: int,
+        *args,
         num_heads: Optional[int] = None,
+        **kwargs,
     ):
         super().__init__()
         num_heads = num_heads if num_heads is not None else 1
@@ -167,7 +180,6 @@ class PositionalEncoding(torch.nn.Module):
         self,
         embed_dim: int,
         max_len: int = 5000,
-        dropout: float = 0.1,
     ):
         super(PositionalEncoding, self).__init__()
         pe = torch.zeros(max_len, embed_dim)
@@ -194,9 +206,15 @@ class PositionalEncoding(torch.nn.Module):
 
 
 class SelfAttentionPooling(AttentionPooling):
-    def __init__(self, input_size: int, use_positional_encoding: Optional[bool] = None):
-        super().__init__(input_size)
-        self.attention = SelfAttentionLayer(input_size)
+    def __init__(
+        self,
+        input_size: int,
+        *args,
+        use_positional_encoding: Optional[bool] = None,
+        **kwargs,
+    ):
+        super().__init__(input_size, *args, **kwargs)
+        self.attention = SelfAttentionLayer(input_size, *args, **kwargs)
         self.pos_encoder = (
             PositionalEncoding(input_size) if use_positional_encoding else None
         )
