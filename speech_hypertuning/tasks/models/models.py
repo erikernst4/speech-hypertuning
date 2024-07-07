@@ -52,12 +52,12 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         upstream_layers_output_to_use: Union[str, List[int], int] = 'all',
         optimizer: Optional[Any] = None,
         lr_scheduler: Optional[Any] = None,
-        pooling_layer: Optional[torch.nn.Module] = None,
+        time_pooling_layer: Optional[torch.nn.Module] = None,
         skip_pooling: Optional[bool] = None,
         frozen_upstream: Optional[bool] = None,
         normalize_upstream_embeddings: Optional[bool] = None,
         normalization_method: Optional[str] = None,
-        layer_pooling: Optional[torch.nn.Module] = None,
+        layer_pooling_layer: Optional[torch.nn.Module] = None,
     ):
         super().__init__()
         self.opt_state = state
@@ -89,15 +89,15 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
         upstream_dim = self.upstream.hidden_sizes[0]
 
-        self.pooling = (
-            pooling_layer(upstream_dim)
-            if pooling_layer is not None
+        self.time_pooling = (
+            time_pooling_layer(upstream_dim)
+            if time_pooling_layer is not None
             else TemporalMeanPooling(upstream_dim)
         )
         self.skip_pooling = skip_pooling if skip_pooling is not None else False
 
         self.downstream = DownstreamForCls(
-            state=state, upstream_dim=self.pooling.output_size
+            state=state, upstream_dim=self.time_pooling.output_size
         )
         if isinstance(upstream_layers_output_to_use, int):
             upstream_layers_output_to_use = [upstream_layers_output_to_use]
@@ -107,8 +107,8 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.upstream_layers_output_to_use = upstream_layers_output_to_use
 
         self.layer_pooling = (
-            layer_pooling(self.upstream_layers_output_to_use)
-            if layer_pooling is not None
+            layer_pooling_layer(self.upstream_layers_output_to_use)
+            if layer_pooling_layer is not None
             else WeightedAverageLayerPooling(self.upstream_layers_output_to_use)
         )
 
@@ -132,15 +132,16 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             x
         )  # (batch_size, upstream_layer, frames, upstream_hidden_dim)
 
-        # Summarize frames dimension if necessary (batch_size, upstream_layer, upstream_hidden_dim)
+        # Summarize time dimension if necessary (batch_size, upstream_layer, upstream_hidden_dim)
         if self.skip_pooling:
-            pooled_hidden = hidden
-            pooled_hidden = self.normalize_features(pooled_hidden)
+            time_pooled_hidden = hidden
+            time_pooled_hidden = self.normalize_features(time_pooled_hidden)
         else:
             normalized_hidden = self.normalize_features(hidden)
-            pooled_hidden = self.pooling(normalized_hidden, hidden_lens)
+            time_pooled_hidden = self.time_pooling(normalized_hidden, hidden_lens)
 
-        layer_pooled = self.layer_pooling(pooled_hidden)
+        # Summarize layers embeddings
+        layer_pooled = self.layer_pooling(time_pooled_hidden)
 
         return layer_pooled
 
