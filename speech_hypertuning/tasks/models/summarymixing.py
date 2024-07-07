@@ -71,12 +71,14 @@ class SummaryMixing(nn.Module):
         self,
         enc_dim,
         nhead,
+        *args,
         local_proj_hid_dim: Optional[list] = [512],
         local_proj_out_dim: Optional[int] = 512,
         summary_hid_dim: Optional[list] = [512],
         summary_out_dim: Optional[int] = 512,
         activation: Optional[nn.Module] = nn.GELU,
         mode: Optional[str] = "SummaryMixing",
+        **kwargs,
     ):
         super(SummaryMixing, self).__init__()
 
