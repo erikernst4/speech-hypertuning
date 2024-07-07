@@ -200,6 +200,67 @@ def extract_upstream_embedding(
     return torch.cat(hidden_states)  # list of embeddings to torch.Tensor
 
 
+def calculate_dataset_upstream_mean_and_std_from_wavs(
+    state,
+    saving_path: str,
+    model_cls: torch.nn.Module,
+    cached: bool = True,
+):
+    def remove_padding_frames(hidden_states, frames_for_each_element):
+        """
+        Stack embeddings from frames without padding
+        """
+        frames_embeddings = []
+        for batch_idx, x in enumerate(hidden_states):
+            for layer in x:
+                cut_padding_idx = frames_for_each_element[batch_idx]
+                layer_wo_padding = layer[:cut_padding_idx]
+                frames_embeddings.append(layer_wo_padding)
+        return torch.cat(frames_embeddings)
+
+    os.makedirs(saving_path, exist_ok=True)
+    mean_saving_path = os.path.join(saving_path, f'dataset_mean.pt')
+    std_saving_path = os.path.join(saving_path, f'dataset_std.pt')
+
+    if cached and (
+        os.path.exists(mean_saving_path) and os.path.exists(std_saving_path)
+    ):
+        state['dataset_mean'] = torch.load(mean_saving_path, weights_only=True)
+        state['dataset_std'] = torch.load(std_saving_path, weights_only=True)
+        return state
+
+    model = model_cls(state, normalize_upstream_embeddings=False)
+    model.to("cuda:0")
+
+    scaler = StandardScaler(with_mean=True, with_std=True)
+
+    train_dataloader = state['dataloaders']['train']
+    for batch in tqdm(train_dataloader):
+        with torch.no_grad():
+            # Forward upstream
+            batch['wav'] = batch['wav'].to("cuda:0")
+            batch['wav_lens'] = batch['wav_lens'].to("cuda:0")
+            hidden, hidden_lens = model.forward_upstream(
+                batch
+            )  # (batch_size, upstream_layer, frames, upstream_hidden_dim)
+
+            batch_embeddings = remove_padding_frames(
+                hidden, hidden_lens
+            )  # (batch_size * upstream_layers * frames_wo_padding, embedding_dim)
+            scaler.partial_fit(batch_embeddings.cpu())
+
+    dataset_mean = torch.from_numpy(scaler.mean_)
+    dataset_std = torch.from_numpy(np.sqrt(scaler.var_))
+
+    state['dataset_mean'] = dataset_mean.to("cuda:0")
+    state['dataset_std'] = dataset_std.to("cuda:0")
+
+    torch.save(dataset_mean, mean_saving_path)
+    torch.save(dataset_std, std_saving_path)
+
+    return state
+
+
 def calculate_dataset_pooled_upstream_mean_and_std_from_wavs(
     state,
     saving_path: str,
@@ -257,7 +318,6 @@ def calculate_dataset_pooled_upstream_mean_and_std_from_wavs(
 
 def calculate_dataset_pooled_mean_and_std(
     state,
-    train_dataloader,
     saving_path: str,
     cached: bool = True,
 ):
