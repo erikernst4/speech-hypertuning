@@ -11,6 +11,8 @@ from lightning import LightningModule
 from s3prl.nn import S3PRLUpstream
 from transformers import AutoFeatureExtractor, WavLMModel
 
+from speech_hypertuning.tasks.models.layer_pooling import \
+    WeightedAverageLayerPooling
 from speech_hypertuning.tasks.models.pooling import TemporalMeanPooling
 
 
@@ -55,6 +57,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         frozen_upstream: Optional[bool] = None,
         normalize_upstream_embeddings: Optional[bool] = None,
         normalization_method: Optional[str] = None,
+        layer_pooling: Optional[torch.nn.Module] = None,
     ):
         super().__init__()
         self.opt_state = state
@@ -103,10 +106,10 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
         self.upstream_layers_output_to_use = upstream_layers_output_to_use
 
-        self.avg_weights = torch.nn.Parameter(
-            torch.ones(
-                len(upstream_layers_output_to_use),
-            )
+        self.layer_pooling = (
+            layer_pooling(self.upstream_layers_output_to_use)
+            if layer_pooling is not None
+            else WeightedAverageLayerPooling(self.upstream_layers_output_to_use)
         )
 
         self.accuracy_top1 = torchmetrics.classification.Accuracy(
@@ -137,15 +140,9 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             normalized_hidden = self.normalize_features(hidden)
             pooled_hidden = self.pooling(normalized_hidden, hidden_lens)
 
-        # Summarize layers embeddings
-        w = torch.nn.functional.softmax(self.avg_weights, dim=0)
+        layer_pooled = self.layer_pooling(pooled_hidden)
 
-        avg_hidden = torch.sum(
-            pooled_hidden[:, self.upstream_layers_output_to_use] * w[None, :, None],
-            dim=1,
-        )  # (batch_size, upstream_hidden_dim)
-
-        return avg_hidden
+        return layer_pooled
 
     def forward_upstream(self, x: Dict[str, Any]) -> torch.Tensor:
         if (
