@@ -30,3 +30,24 @@ class WeightedAverageLayerPooling(torch.nn.Module):
         )  # (batch_size, upstream_hidden_dim)
 
         return avg_hidden
+
+
+class FixedLayerPooling(torch.nn.Module):
+    def __init__(
+        self,
+        *args,
+        layer_idx_to_use: int = 4,
+        **kwargs,
+    ):
+        super().__init__()
+        self.layer_idx_to_use = layer_idx_to_use
+
+    def forward(self, x):
+        """
+        Get embedding from fixed layer.
+
+        Args:
+            x (torch.Tensor): Input tensor (#batch_size, #upstream_layers, upstream_hidden_dim).
+        """
+
+        return x[:, self.layer_idx_to_use]

@@ -11,9 +11,8 @@ from lightning import LightningModule
 from s3prl.nn import S3PRLUpstream
 from transformers import AutoFeatureExtractor, WavLMModel
 
-from speech_hypertuning.tasks.models.layer_pooling import \
-    WeightedAverageLayerPooling
-from speech_hypertuning.tasks.models.pooling import TemporalMeanPooling
+from speech_hypertuning.tasks.models.poolings import (
+    TemporalMeanPooling, WeightedAverageLayerPooling)
 
 
 class DownstreamForCls(torch.nn.Module):
