@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional, Union
 
 warnings.simplefilter("ignore", UserWarning)
 
-import numpy as np
 import torch
 import torchmetrics
 from lightning import LightningModule
@@ -57,6 +56,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         normalize_upstream_embeddings: Optional[bool] = None,
         normalization_method: Optional[str] = None,
         layer_pooling_layer: Optional[torch.nn.Module] = None,
+        time_pooling_before_layer_pooling: Optional[bool] = None,
     ):
         super().__init__()
         self.opt_state = state
@@ -106,11 +106,19 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.upstream_layers_output_to_use = upstream_layers_output_to_use
 
         self.layer_pooling = (
-            layer_pooling_layer(self.upstream_layers_output_to_use)
+            layer_pooling_layer(
+                upstream_layers_output_to_use=self.upstream_layers_output_to_use,
+                embed_dim=upstream_dim,
+            )
             if layer_pooling_layer is not None
             else WeightedAverageLayerPooling(self.upstream_layers_output_to_use)
         )
 
+        self.time_pooling_before_layer_pooling = (
+            time_pooling_before_layer_pooling
+            if time_pooling_before_layer_pooling is not None
+            else True
+        )
         self.accuracy_top1 = torchmetrics.classification.Accuracy(
             task="multiclass", num_classes=self.num_classes
         )
@@ -131,18 +139,22 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             x
         )  # (batch_size, upstream_layer, frames, upstream_hidden_dim)
 
-        # Summarize time dimension if necessary (batch_size, upstream_layer, upstream_hidden_dim)
+        # Use time pooled embeddings already calculated
         if self.skip_pooling:
             time_pooled_hidden = hidden
             time_pooled_hidden = self.normalize_features(time_pooled_hidden)
-        else:
-            normalized_hidden = self.normalize_features(hidden)
+            return self.layer_pooling(time_pooled_hidden)
+
+        normalized_hidden = self.normalize_features(hidden)
+
+        if self.time_pooling_before_layer_pooling:
             time_pooled_hidden = self.time_pooling(normalized_hidden, hidden_lens)
+            upstream_embedding = self.layer_pooling(time_pooled_hidden)
+        else:
+            layer_pooled_hidden = self.layer_pooling(normalized_hidden)
+            upstream_embedding = self.time_pooling(layer_pooled_hidden, hidden_lens)
 
-        # Summarize layers embeddings
-        layer_pooled = self.layer_pooling(time_pooled_hidden)
-
-        return layer_pooled
+        return upstream_embedding
 
     def forward_upstream(self, x: Dict[str, Any]) -> torch.Tensor:
         if (
