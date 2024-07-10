@@ -75,9 +75,12 @@ class AttentionTimePooling(AttentionPooling):
         return attn_output
 
     def create_padding_masks(
-        self, xs: torch.Tensor, xs_len: torch.LongTensor
+        self, xs: torch.Tensor, xs_len: torch.LongTensor, original_shape: torch.Size
     ) -> Optional[torch.Tensor]:
-        batch_size, upstream_layers, frames, _ = xs.size()
+        if self.before_layer_pooling:
+            batch_size, upstream_layers, frames, _ = original_shape
+        else:
+            batch_size, frames, _ = original_shape
 
         max_len = frames
 
@@ -86,14 +89,15 @@ class AttentionTimePooling(AttentionPooling):
 
         # Create the attention mask based on xs_len
         mask_base = torch.arange(max_len).expand(batch_size, max_len).to("cuda")
-        mask = mask_base >= xs_len.unsqueeze(1)
+        mask = mask_base >= xs_len.unsqueeze(1)  # (batch_size, max_len)
 
-        # Expand the mask to match the shape (batch_size * upstream_layers, max_len)
-        mask = (
-            mask.unsqueeze(1)
-            .expand(batch_size, upstream_layers, max_len)
-            .reshape(batch_size * upstream_layers, max_len)
-        )
+        if self.before_layer_pooling:
+            # Expand the mask to match the shape (batch_size * upstream_layers, max_len)
+            mask = (
+                mask.unsqueeze(1)
+                .expand(batch_size, upstream_layers, max_len)
+                .reshape(batch_size * upstream_layers, max_len)
+            )
         return mask
 
 

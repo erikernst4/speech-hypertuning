@@ -29,7 +29,7 @@ class AttentionPooling(torch.nn.Module):
 
         original_shape = xs.size()
 
-        padding_mask = self.create_padding_masks(xs, xs_len)
+        padding_mask = self.create_padding_masks(xs, xs_len, original_shape)
 
         xs = self.prepare_attention_input(xs, original_shape)
 
@@ -55,7 +55,7 @@ class AttentionPooling(torch.nn.Module):
         return attn_output
 
     def create_padding_masks(
-        self, xs: torch.Tensor, xs_len: torch.LongTensor
+        self, xs: torch.Tensor, xs_len: torch.LongTensor, original_shape: torch.Size
     ) -> Optional[torch.Tensor]:
         return None
 
