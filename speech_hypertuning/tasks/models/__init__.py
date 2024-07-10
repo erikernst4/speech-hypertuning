@@ -15,7 +15,7 @@ from .fit import fit_model
 from .load import load_model
 from .models import (DownstreamForCls, HFUpstreamMLPDownstreamForCls,
                      S3PRLUpstreamMLPDownstreamForCls)
-from .poolings import (FixedLayerPooling, SelfAttentionPooling,
-                       SummaryMixingPooling, TransformerPooling,
-                       WeightedAverageLayerPooling)
+from .poolings import (FixedLayerPooling, SelfAttentionLayerPooling,
+                       SelfAttentionPooling, SummaryMixingPooling,
+                       TransformerPooling, WeightedAverageLayerPooling)
 from .test import test_model
