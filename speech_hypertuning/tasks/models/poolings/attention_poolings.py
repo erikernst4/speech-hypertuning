@@ -21,42 +21,78 @@ class AttentionPooling(torch.nn.Module):
     def forward(self, xs: torch.Tensor, xs_len: torch.LongTensor):
         """
         Args:
-            xs (torch.Tensor): Input tensor (#batch, #hidden_states, #frames, hidden_dim).
+            xs (torch.Tensor): Input tensor.
             xs_len (torch.LongTensor): with the lengths for each sample  (batch_size)
         Returns:
             torch.Tensor: Output tensor (#batch, #hidden_states, output_size)
         """
+        if self.pooled_dim is None:
+            raise ValueError("Dimension to pool not set.")
+
+        original_shape = xs.size()
+
         padding_mask = self.create_padding_masks(xs, xs_len)
 
-        # x shape: (batch_size, upstream_layers, frames, embed_dim)
-        batch_size, upstream_layers, frames, embed_dim = xs.size()
+        xs = self.prepare_attention_input(xs, original_shape)
 
-        # Reshape to (batch_size * upstream_layers, frames, embed_dim)
-        xs = xs.reshape(batch_size * upstream_layers, frames, embed_dim)
-
+        # (N, |seq|, embed_dim)
         if self.pos_encoder is not None:
             xs = self.pos_encoder(xs)
 
         if self.dropout is not None:
             xs = self.dropout(xs)
 
-        attn_output = self.attention(
-            xs, padding_mask
-        )  # (batch_size, upstream_layers, frames, upstream_hidden_dim)
+        attn_output = self.attention(xs, padding_mask)
 
-        # Reshape back to (batch_size, upstream_layers, frames, embed_dim)
-        attn_output = attn_output.view(batch_size, upstream_layers, frames, embed_dim)
+        self.post_process_attention_output(attn_output, original_shape)
 
-        pooled_output = torch.mean(
-            attn_output, dim=2
-        )  # (batch_size, upstream_layers, upstream_hidden_dim)
+        pooled_output = torch.mean(attn_output, dim=self.pooled_dim)
 
         return pooled_output
+
+    def prepare_attention_input(self, xs, original_shape):
+        return xs
+
+    def post_process_attention_output(self, attn_output, original_shape):
+        return attn_output
 
     def create_padding_masks(
         self, xs: torch.Tensor, xs_len: torch.LongTensor
     ) -> Optional[torch.Tensor]:
-        batch_size, upstream_layers, frames, embed_dim = xs.size()
+        return None
+
+
+class AttentionTimePooling(AttentionPooling):
+    def __init__(self, *args, before_layer_pooling: Optional[bool] = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.before_layer_pooling = (
+            before_layer_pooling if before_layer_pooling is not None else True
+        )
+
+        self.pooled_dim = 2 if self.before_layer_pooling else 1
+
+    def prepare_attention_input(self, xs, original_shape):
+        if self.before_layer_pooling:
+            # x shape: (batch_size, upstream_layers, frames, embed_dim)
+            batch_size, upstream_layers, frames, embed_dim = original_shape
+
+            # Reshape to (batch_size * upstream_layers, frames, embed_dim)
+            xs = xs.reshape(batch_size * upstream_layers, frames, embed_dim)
+        return xs
+
+    def post_process_attention_output(self, attn_output, original_shape):
+        if self.before_layer_pooling:
+            batch_size, upstream_layers, frames, embed_dim = original_shape
+            # Reshape back to (batch_size, upstream_layers, frames, embed_dim)
+            attn_output = attn_output.view(
+                batch_size, upstream_layers, frames, embed_dim
+            )
+        return attn_output
+
+    def create_padding_masks(
+        self, xs: torch.Tensor, xs_len: torch.LongTensor
+    ) -> Optional[torch.Tensor]:
+        batch_size, upstream_layers, frames, _ = xs.size()
 
         max_len = frames
 
@@ -197,9 +233,9 @@ class PositionalEncoding(torch.nn.Module):
         Adds positional encoding to the input.
 
         Args:
-            xs (torch.Tensor): Input tensor (#batch * #hidden_states, #frames, hidden_dim).
+            xs (torch.Tensor): Input tensor (N, #frames, hidden_dim).
         Returns:
-            torch.Tensor: Output tensor #batch * #hidden_states, #frames, hidden_dim)
+            torch.Tensor: Output tensor N, #frames, hidden_dim)
         """
         seq_len = xs.size(1)
         return xs + self.pe[:, :seq_len]
