@@ -12,21 +12,37 @@ class TemporalMeanPooling(torch.nn.Module):
     Computes Temporal Mean Pooling for each layer.
     """
 
-    def __init__(self, input_size: int, *args, **kwargs):
+    def __init__(
+        self,
+        input_size: int,
+        *args,
+        before_layer_pooling: Optional[bool] = None,
+        **kwargs,
+    ):
         super().__init__()
         self.input_size = input_size
         self.output_size = input_size
+        self.before_layer_pooling = (
+            before_layer_pooling if before_layer_pooling is not None else True
+        )
 
     def forward(self, xs: torch.Tensor):
         """
+        Compute mean along the temporal dimension
+
         Args:
-            xs (torch.Tensor): Input tensor (#batch, #hidden_states, input_size, hidden_dim).
+            xs (torch.Tensor): Input tensor
+                (#batch, #hidden_states, frames, hidden_dim) if before_layer_pooling,
+                else (#batch, frames, hidden_dim)
         Returns:
-            torch.Tensor: Output tensor (#batch, input_size)
+            torch.Tensor: Output tensor
+            (#batch, #hidden_states, hidden_dim) if before_layer_pooling,
+            else (#batch, hidden_dim)
         """
 
-        # Compute mean along the temporal dimension
-        mean_pooled = torch.mean(xs, dim=2)
+        time_dim = 2 if self.before_layer_pooling else 1
+
+        mean_pooled = torch.mean(xs, dim=time_dim)
 
         return mean_pooled
 
