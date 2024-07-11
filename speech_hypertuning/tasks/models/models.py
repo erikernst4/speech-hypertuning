@@ -89,7 +89,10 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         upstream_dim = self.upstream.hidden_sizes[0]
 
         self.time_pooling = (
-            time_pooling_layer(upstream_dim)
+            time_pooling_layer(
+                input_size=upstream_dim,
+                before_layer_pooling=time_pooling_before_layer_pooling,
+            )
             if time_pooling_layer is not None
             else TemporalMeanPooling(upstream_dim)
         )
@@ -109,6 +112,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             layer_pooling_layer(
                 upstream_layers_output_to_use=self.upstream_layers_output_to_use,
                 embed_dim=upstream_dim,
+                before_time_pooling=not (time_pooling_before_layer_pooling),
             )
             if layer_pooling_layer is not None
             else WeightedAverageLayerPooling(self.upstream_layers_output_to_use)
