@@ -16,7 +16,7 @@ class AttentionPooling(torch.nn.Module):
 
         self.dropout = torch.nn.Dropout(p=dropout) if dropout is not None else None
 
-    def forward(self, xs: torch.Tensor, xs_len: torch.LongTensor):
+    def forward(self, xs: torch.Tensor, xs_len: Optional[torch.LongTensor] = None):
         """
         Args:
             xs (torch.Tensor): Input tensor.
@@ -42,7 +42,7 @@ class AttentionPooling(torch.nn.Module):
 
         attn_output = self.attention(xs, padding_mask)
 
-        self.post_process_attention_output(attn_output, original_shape)
+        attn_output = self.post_process_attention_output(attn_output, original_shape)
 
         pooled_output = torch.mean(attn_output, dim=self.pooled_dim)
 
