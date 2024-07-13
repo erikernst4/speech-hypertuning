@@ -25,8 +25,9 @@ class TemporalMeanPooling(torch.nn.Module):
         self.before_layer_pooling = (
             before_layer_pooling if before_layer_pooling is not None else True
         )
+        self.time_dim = 2 if self.before_layer_pooling else 1
 
-    def forward(self, xs: torch.Tensor):
+    def forward(self, xs: torch.Tensor, *args, **kwargs):
         """
         Compute mean along the temporal dimension
 
@@ -40,9 +41,7 @@ class TemporalMeanPooling(torch.nn.Module):
             else (#batch, hidden_dim)
         """
 
-        time_dim = 2 if self.before_layer_pooling else 1
-
-        mean_pooled = torch.mean(xs, dim=time_dim)
+        mean_pooled = torch.mean(xs, dim=self.time_dim)
 
         return mean_pooled
 
