@@ -7,6 +7,7 @@ warnings.simplefilter("ignore", UserWarning)
 import torch
 import torchmetrics
 from lightning import LightningModule
+from loguru import logger
 from s3prl.nn import S3PRLUpstream
 from transformers import AutoFeatureExtractor, WavLMModel
 
@@ -14,14 +15,39 @@ from speech_hypertuning.tasks.models.poolings import (
     TemporalMeanPooling, WeightedAverageLayerPooling)
 
 
+class PoolingProjector(torch.nn.Module):
+    def __init__(
+        self,
+        embed_dim: int,
+        output_dim: Optional[int] = None,
+    ):
+        super().__init__()
+        if output_dim is None:
+            output_dim = embed_dim
+
+        self.projector = torch.nn.Linear(embed_dim, output_dim)
+
+    def forward(self, x: torch.Tensor):
+
+        return self.projector(x)
+
+
 class DownstreamForCls(torch.nn.Module):
     def __init__(
         self,
         state: Dict[str, Any],
         upstream_dim: int,
-        hidden_layers: int = 2,
-        hidden_dim: int = 128,
+        hidden_layers: Optional[int] = None,
+        hidden_dim: Optional[int] = None,
     ):
+        if hidden_dim is None:
+            logger.info("No hidden dim set for Downstream, setting to 128 as default")
+            hidden_dim = 128
+
+        if hidden_layers is None:
+            logger.info("No hidden layers set for Downstream, setting to 2 as default")
+            hidden_layers = 2
+
         super().__init__()
         self.opt_state = state
         self.mapping = state['speaker_id_mapping']
@@ -57,6 +83,8 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         normalization_method: Optional[str] = None,
         layer_pooling_layer: Optional[torch.nn.Module] = None,
         time_pooling_before_layer_pooling: Optional[bool] = None,
+        pooling_projector: Optional[bool] = None,
+        downstream_cls: Optional[torch.nn.Module] = None,
     ):
         super().__init__()
         self.opt_state = state
@@ -98,9 +126,13 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         )
         self.skip_pooling = skip_pooling if skip_pooling is not None else False
 
-        self.downstream = DownstreamForCls(
+        if downstream_cls is None:
+            downstream_cls = DownstreamForCls
+
+        self.downstream = downstream_cls(
             state=state, upstream_dim=self.time_pooling.output_size
         )
+
         if isinstance(upstream_layers_output_to_use, int):
             upstream_layers_output_to_use = [upstream_layers_output_to_use]
         elif upstream_layers_output_to_use == 'all':
@@ -123,6 +155,11 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             if time_pooling_before_layer_pooling is not None
             else True
         )
+
+        self.pooling_projector = (
+            PoolingProjector(upstream_dim) if pooling_projector else torch.nn.Identity()
+        )
+
         self.accuracy_top1 = torchmetrics.classification.Accuracy(
             task="multiclass", num_classes=self.num_classes
         )
@@ -153,9 +190,11 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
         if self.time_pooling_before_layer_pooling:
             time_pooled_hidden = self.time_pooling(normalized_hidden, hidden_lens)
+            time_pooled_hidden = self.pooling_projector(time_pooled_hidden)
             upstream_embedding = self.layer_pooling(time_pooled_hidden)
         else:
             layer_pooled_hidden = self.layer_pooling(normalized_hidden)
+            layer_pooled_hidden = self.pooling_projector(layer_pooled_hidden)
             upstream_embedding = self.time_pooling(layer_pooled_hidden, hidden_lens)
 
         return upstream_embedding
