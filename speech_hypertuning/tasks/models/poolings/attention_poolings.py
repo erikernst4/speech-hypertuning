@@ -70,7 +70,7 @@ class TransformerLayer(torch.nn.Module):
         dropout: Optional[float] = None,
     ):
         super().__init__()
-        num_heads = num_heads if num_heads is not None else 1
+        num_heads = num_heads if num_heads is not None else 16
         num_layers = num_layers if num_layers is not None else 1
         dim_feedforward = dim_feedforward if dim_feedforward is not None else 2048
         dropout = dropout if dropout is not None else 0.1
@@ -113,7 +113,7 @@ class SelfAttentionLayer(torch.nn.Module):
         **kwargs,
     ):
         super().__init__()
-        num_heads = num_heads if num_heads is not None else 1
+        num_heads = num_heads if num_heads is not None else 16
         self.multihead_attn = torch.nn.MultiheadAttention(
             embed_dim, num_heads, batch_first=True
         )

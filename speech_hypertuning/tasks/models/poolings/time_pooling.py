@@ -126,7 +126,7 @@ class SummaryMixingPooling(AttentionTimePooling):
         self, input_size: int, *args, num_heads: Optional[int] = None, **kwargs
     ):
         super().__init__(input_size, *args, **kwargs)
-        num_heads = num_heads if num_heads is not None else 8
+        num_heads = num_heads if num_heads is not None else 16
         self.attention = SummaryMixing(
             enc_dim=input_size,
             summary_out_dim=input_size,
