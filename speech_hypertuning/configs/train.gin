@@ -2,19 +2,21 @@ execute_pipeline:
     tasks = [
         @tasks.utils.set_seed,
         @tasks.load_data.load_dataset,
+#        @tasks.models.save_upstream_embeddings,
         @tasks.load_data.calculate_prior_distribution_entropy,
         @tasks.load_data.process_classes,
         @tasks.load_data.get_dataloaders,
+        @tasks.models.calculate_dataset_upstream_mean_and_std_from_wavs,
+#        @tasks.models.calculate_dataset_pooled_mean_and_std,
         @tasks.models.fit_model,
         @tasks.models.test_model,
     ]
     execution_order = 'sequential'
 
-tasks.utils.set_seed.seed=%SEED
+tasks.models.calculate_dataset_upstream_mean_and_std_from_wavs.saving_path='/home/eernst/Voxceleb1/wavlm'
+tasks.models.calculate_dataset_upstream_mean_and_std_from_wavs.model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
 
-tasks.models.save_upstream_embeddings:
-    saving_path = "/home/eernst/Voxceleb1/mean+std_embeddings"
-    df_key="dataset_metadata"
+tasks.utils.set_seed.seed=%SEED
 
 train/torch.utils.data.DataLoader:
     shuffle=True
@@ -41,11 +43,11 @@ torch.lr_scheduler.ReduceLROnPlateau:
     factor=0.5
 
 tasks.models.DownstreamForCls:
-    hidden_layers=1
-    hidden_dim=32768
+    hidden_layers=0
 
 tasks.models.S3PRLUpstreamMLPDownstreamForCls:
     optimizer=@torch.optim.Adam
+    downstream_cls=@tasks.models.DownstreamForCls
 
 tasks.models.fit_model:
     model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
@@ -59,6 +61,7 @@ tasks.models.test_model:
 pl.Trainer:
     logger=@pl.loggers.CSVLogger()
     devices=%DEVICE
+#    callbacks=[@pl.callbacks.ModelCheckpoint()]
     callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.EarlyStopping()]
     accelerator='gpu'
     accumulate_grad_batches=%GRAD_ACC
@@ -68,13 +71,13 @@ pl.Trainer:
     max_steps=%MAX_TRAIN_STEPS
     val_check_interval=%CHECKPOINT_INTERVAL
     check_val_every_n_epoch=None
-    enable_progress_bar=False
 
 pl.callbacks.ModelCheckpoint:
     dirpath=%OUTPUT_DIR
     monitor="val_loss"
     mode="min"
     save_top_k=1
+#    save_top_k=-1
     save_on_train_epoch_end=False
 
 pl.loggers.CSVLogger:
