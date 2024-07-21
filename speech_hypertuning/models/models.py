@@ -9,12 +9,9 @@ import torchmetrics
 from lightning import LightningModule
 from loguru import logger
 from s3prl.nn import S3PRLUpstream
-from transformers import AutoFeatureExtractor, WavLMModel
 
-from speech_hypertuning.tasks.models.poolings import (
-    TemporalMeanPooling,
-    WeightedAverageLayerPooling,
-)
+from speech_hypertuning.models.poolings import (TemporalMeanPooling,
+                                                WeightedAverageLayerPooling)
 
 
 class PoolingProjector(torch.nn.Module):

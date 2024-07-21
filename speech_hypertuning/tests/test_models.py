@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import torch
 
-from speech_hypertuning.tasks.models import S3PRLUpstreamMLPDownstreamForCls
+from speech_hypertuning.models import S3PRLUpstreamMLPDownstreamForCls
 
 
 class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
@@ -17,7 +17,9 @@ class S3PRLUpstreamMLPDownstreamForClsTestCase(TestCase):
                 "id5": 5,
             }
         }
-        self.model = S3PRLUpstreamMLPDownstreamForCls(self.state, frozen_upstream=True)
+        self.model = S3PRLUpstreamMLPDownstreamForCls(
+            self.state, upstream_eval_mode=True
+        )
 
         self.embedding_example = torch.load(
             os.path.dirname(os.path.realpath(__file__)) + "/data/embedding_example.pt"

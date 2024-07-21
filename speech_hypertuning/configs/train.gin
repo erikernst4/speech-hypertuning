@@ -14,7 +14,7 @@ execute_pipeline:
     execution_order = 'sequential'
 
 tasks.models.calculate_dataset_upstream_mean_and_std_from_wavs.saving_path='/home/eernst/Voxceleb1/wavlm'
-tasks.models.calculate_dataset_upstream_mean_and_std_from_wavs.model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
+tasks.models.calculate_dataset_upstream_mean_and_std_from_wavs.model_cls=@models.S3PRLUpstreamMLPDownstreamForCls
 
 tasks.utils.set_seed.seed=%SEED
 
@@ -42,20 +42,20 @@ torch.lr_scheduler.ReduceLROnPlateau:
     patience=5
     factor=0.5
 
-tasks.models.DownstreamForCls:
+models.DownstreamForCls:
     hidden_layers=0
 
-tasks.models.S3PRLUpstreamMLPDownstreamForCls:
+models.S3PRLUpstreamMLPDownstreamForCls:
     optimizer=@torch.optim.Adam
-    downstream_cls=@tasks.models.DownstreamForCls
+    downstream_cls=@models.DownstreamForCls
 
 tasks.models.fit_model:
-    model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
+    model_cls=@models.S3PRLUpstreamMLPDownstreamForCls
     trainer_cls=@pl.Trainer
     from_checkpoint=%INITIAL_CHECKPOINT
 
 tasks.models.test_model:
-    model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
+    model_cls=@models.S3PRLUpstreamMLPDownstreamForCls
     trainer_cls=@pl.Trainer
 
 pl.Trainer:

@@ -10,21 +10,7 @@ from .extract import (
     extract_upstream_embedding_w_temporal_minmax_pooling,
     extract_upstream_embedding_w_temporal_statistics_plus_pooling,
     extract_upstream_embedding_w_temporal_statistics_pooling,
-    save_upstream_embeddings,
-)
+    save_upstream_embeddings)
 from .fit import fit_model
 from .load import load_model
-from .models import (
-    DownstreamForCls,
-    S3PRLUpstreamMLPDownstreamForCls,
-)
-from .poolings import (
-    FixedLayerPooling,
-    SelfAttentionLayerPooling,
-    SelfAttentionPooling,
-    SummaryMixingPooling,
-    TransformerPooling,
-    WeightedAverageLayerPooling,
-    TemporalMeanPooling,
-)
 from .test import test_model
