@@ -10,8 +10,10 @@ from lightning import LightningModule
 from loguru import logger
 from s3prl.nn import S3PRLUpstream
 
-from speech_hypertuning.models.poolings import (TemporalMeanPooling,
-                                                WeightedAverageLayerPooling)
+from speech_hypertuning.models.poolings import (
+    TemporalMeanPooling,
+    WeightedAverageLayerPooling,
+)
 
 
 class PoolingProjector(torch.nn.Module):
@@ -251,10 +253,22 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self, batch: torch.Tensor
     ) -> torch.Tensor:
         losses = self.calculate_loss(batch)
+
+        out = self(batch)
+        yhat = out.squeeze()
+        if len(yhat.shape) == 1:
+            yhat = yhat.unsqueeze(dim=0)
+        y = batch['class_id']
+
+        accuracy_top1 = self.accuracy_top1(yhat, y)
+        accuracy_top5 = self.accuracy_top5(yhat, y)
         normalized_loss = self.calculate_normalized_loss(losses)
 
         self.log_results(losses, 'train')
+        self.log_results(accuracy_top1, 'train', 'accuracy_top1')
+        self.log_results(accuracy_top5, 'train', 'accuracy_top5')
         self.log_results(normalized_loss, 'train', 'normalized_loss')
+
         return losses
 
     def validation_step(  # pylint: disable=arguments-differ
