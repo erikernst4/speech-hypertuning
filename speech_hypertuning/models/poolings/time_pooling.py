@@ -2,8 +2,12 @@ from typing import Optional
 
 import torch
 
-from .attention_poolings import (AttentionPooling, PositionalEncoding,
-                                 SelfAttentionLayer, TransformerLayer)
+from .attention_poolings import (
+    AttentionPooling,
+    PositionalEncoding,
+    SelfAttentionLayer,
+    TransformerLayer,
+)
 from .summarymixing import SummaryMixing
 
 
@@ -110,6 +114,8 @@ class SelfAttentionPooling(AttentionTimePooling):
     ):
         super().__init__(input_size, *args, **kwargs)
         self.attention = SelfAttentionLayer(input_size, *args, **kwargs)
+        if use_positional_encoding is None:
+            use_positional_encoding = True
         self.pos_encoder = (
             PositionalEncoding(input_size) if use_positional_encoding else None
         )
