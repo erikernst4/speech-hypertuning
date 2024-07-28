@@ -41,7 +41,7 @@ class DownstreamForCls(torch.nn.Module):
         hidden_layers: Optional[int] = None,
         hidden_dim: Optional[int] = None,
     ):
-        if hidden_dim is None:
+        if hidden_dim is None and (hidden_layers is None or hidden_layers > 0):
             logger.info("No hidden dim set for Downstream, setting to 128 as default")
             hidden_dim = 128
 
@@ -260,13 +260,9 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             yhat = yhat.unsqueeze(dim=0)
         y = batch['class_id']
 
-        accuracy_top1 = self.accuracy_top1(yhat, y)
-        accuracy_top5 = self.accuracy_top5(yhat, y)
         normalized_loss = self.calculate_normalized_loss(losses)
 
         self.log_results(losses, 'train')
-        self.log_results(accuracy_top1, 'train', 'accuracy_top1')
-        self.log_results(accuracy_top5, 'train', 'accuracy_top5')
         self.log_results(normalized_loss, 'train', 'normalized_loss')
 
         return losses
