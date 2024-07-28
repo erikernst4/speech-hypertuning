@@ -17,6 +17,7 @@ def test_model(
     dataloaders_key: str = 'dataloaders',
     checkpoint_folder: str = 'checkpoints',
     model_type: str = 'torch',
+    test_partition: str = 'test',
 ):
 
     if model_type == 'torch':
@@ -38,8 +39,8 @@ def test_model(
         )
         base_dir = trainer.checkpoint_callback.dirpath
         # Find last checkpoint
+        ckpts = list(Path(base_dir).glob('*.ckpt'))
         if from_checkpoint == 'last':
-            ckpts = list(Path(base_dir).glob('*.ckpt'))
             if 'last' in [x.stem for x in ckpts]:
                 from_checkpoint = Path(base_dir, 'last.ckpt')
             else:
@@ -53,19 +54,35 @@ def test_model(
                     raise ValueError(
                         f'No checkpoints found in {base_dir}. Training from scratch.'
                     )
+        if from_checkpoint == "all":
+            for ckpt in ckpts:
+                model = model_cls(**kwargs)
+                ckpt_data = torch.load(ckpt)
+                model.set_optimizer_state(ckpt_data['optimizer_states'])
+                model.load_state_dict(ckpt_data['state_dict'], strict=False)
+                logger.info(torchinfo.summary(model))
+                test_metrics = trainer.test(
+                    model=model,
+                    dataloaders=state[dataloaders_key][test_partition],
+                    verbose=True,
+                )
 
-        if from_checkpoint is not None:
-            ckpt_data = torch.load(from_checkpoint)
-            model.set_optimizer_state(ckpt_data['optimizer_states'])
-            model.load_state_dict(ckpt_data['state_dict'], strict=False)
-            from_checkpoint = None
+                state[f'test_metrics_{ckpt.stem}'] = test_metrics
 
-        test_metrics = trainer.test(
-            model=model,
-            dataloaders=state[dataloaders_key]['test'],
-            verbose=True,
-        )
+        else:
+            if from_checkpoint is not None:
+                ckpt_data = torch.load(from_checkpoint)
+                model.set_optimizer_state(ckpt_data['optimizer_states'])
+                model.load_state_dict(ckpt_data['state_dict'], strict=False)
+                from_checkpoint = None
 
-        state['test_metrics'] = test_metrics
+            logger.info(torchinfo.summary(model))
+            test_metrics = trainer.test(
+                model=model,
+                dataloaders=state[dataloaders_key][test_partition],
+                verbose=True,
+            )
+
+            state['test_metrics'] = test_metrics
 
         return state
