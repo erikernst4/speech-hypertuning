@@ -5,6 +5,7 @@ from typing import Any, Dict
 import joblib
 import torch
 import torchinfo
+from tqdm import tqdm
 from loguru import logger
 
 
@@ -54,20 +55,21 @@ def test_model(
                     raise ValueError(
                         f'No checkpoints found in {base_dir}. Training from scratch.'
                     )
+
         if from_checkpoint == "all":
-            for ckpt in ckpts:
+            for ckpt in tqdm(ckpts, desc="Testing Checkpoints"):
                 model = model_cls(**kwargs)
                 ckpt_data = torch.load(ckpt)
                 model.set_optimizer_state(ckpt_data['optimizer_states'])
                 model.load_state_dict(ckpt_data['state_dict'], strict=False)
-                logger.info(torchinfo.summary(model))
+                logger.info(f"Testing checkpoint {ckpt}")
                 test_metrics = trainer.test(
                     model=model,
                     dataloaders=state[dataloaders_key][test_partition],
                     verbose=True,
                 )
 
-                state[f'test_metrics_{ckpt.stem}'] = test_metrics
+                state[f'{test_partition}_metrics_{ckpt.stem}'] = test_metrics
 
         else:
             if from_checkpoint is not None:
@@ -83,6 +85,6 @@ def test_model(
                 verbose=True,
             )
 
-            state['test_metrics'] = test_metrics
+            state[f'{test_partition}_metrics'] = test_metrics
 
         return state
