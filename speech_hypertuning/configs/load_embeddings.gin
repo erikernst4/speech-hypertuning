@@ -1,3 +1,7 @@
 tasks.load_data.DictDataset:
     out_cols=['class_id', 'upstream_embedding', 'upstream_embedding_precalculated']
     preprocessors=[@tasks.load_data.ProcessorLoadUpstreamEmbedding]
+
+tasks.models.save_upstream_embeddings:
+    saving_path = "/home/eernst/Voxceleb1/all_static_poolings_embeddings"
+    df_key="dataset_metadata"

@@ -1,0 +1,67 @@
+execute_pipeline:
+    tasks = [
+        @tasks.utils.set_seed,
+        @tasks.load_data.load_dataset,
+        @tasks.load_data.process_classes,
+        @tasks.load_data.get_dataloaders,
+        @tasks.fit_s3prl_superb_sid,
+        @tasks.models.test_model,
+    ]
+    execution_order = 'sequential'
+
+tasks.utils.set_seed.seed=%SEED
+
+train/torch.utils.data.DataLoader:
+    shuffle=True
+    batch_size=%TRAIN_BATCH_SIZE
+    num_workers=%TRAIN_DATALOADER_NUM_WORKERS
+
+
+val/torch.utils.data.DataLoader:
+    shuffle=False
+    batch_size=%VAL_BATCH_SIZE
+    num_workers=%VAL_DATALOADER_NUM_WORKERS
+
+test/torch.utils.data.DataLoader:
+    shuffle=False
+    batch_size=%TEST_BATCH_SIZE
+    num_workers=%TEST_DATALOADER_NUM_WORKERS
+
+tasks.models.fit_model:
+    model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
+    trainer_cls=@pl.Trainer
+    from_checkpoint=%INITIAL_CHECKPOINT
+
+tasks.models.test_model:
+    model_cls=@tasks.models.S3PRLUpstreamMLPDownstreamForCls
+    trainer_cls=@pl.Trainer
+
+pl.Trainer:
+    logger=@pl.loggers.CSVLogger()
+    devices=%DEVICE
+    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.EarlyStopping()]
+    accelerator='gpu'
+    accumulate_grad_batches=%GRAD_ACC
+    num_sanity_val_steps=1
+    precision=%PRECISION
+    max_epochs=-1
+    max_steps=%MAX_TRAIN_STEPS
+    val_check_interval=%CHECKPOINT_INTERVAL
+    check_val_every_n_epoch=None
+
+pl.callbacks.ModelCheckpoint:
+    dirpath=%OUTPUT_DIR
+    monitor="val_loss"
+    mode="min"
+    save_top_k=1
+    save_on_train_epoch_end=False
+
+pl.loggers.CSVLogger:
+    save_dir=%OUTPUT_DIR
+    name='pretrain_logs'
+
+pl.callbacks.EarlyStopping:
+    monitor="val_normalized_loss"
+    min_delta=0.0001
+    patience=10
+    mode="min"

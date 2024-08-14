@@ -18,14 +18,12 @@ tasks.load_data.process_classes.dataset_key_in="dataset_metadata"
 tasks.load_data.dataset_random_split:
     proportions=%PROPORTIONS
 
-tasks.load_data.DictDataset.index_mapper=@tasks.load_data.compensate_lengths
-tasks.load_data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will sample long audios multiple times during one epoch (duration//compensate_framing times)
+#tasks.load_data.DictDataset.index_mapper=@tasks.load_data.compensate_lengths
+#tasks.load_data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will sample long audios multiple times during one epoch (duration//compensate_framing times)
 
 tasks.load_data.load_dataset:
     filters=[@tasks.load_data.remove_long_audios]
-    splits_csv="/home/eernst/Voxceleb1/official_splits.csv"
-
-tasks.load_data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
+    splits_csv="/home/eernst/Voxceleb1/official_splits-fixed.csv"
 
 tasks.load_data.create_splits:
     output_dir='/home/eernst/Voxceleb1/'
