@@ -37,6 +37,19 @@ test/torch.utils.data.DataLoader:
 torch.optim.Adam:
     lr=1e-4
 
+torch.optim.SGD:
+    lr=0.02
+    momentum=0.9
+    weight_decay=4.0e-4
+
+models.ExponentialDecayWithWarmup:
+    initial_lr=0.02
+    final_lr=1.25e-05
+    warmup_epochs=1
+    warmup_target_lr=0.0140625
+    total_epochs=20
+
+
 torch.lr_scheduler.ReduceLROnPlateau:
     mode='min'
     patience=5
@@ -47,7 +60,9 @@ models.DownstreamForCls:
 
 models.S3PRLUpstreamMLPDownstreamForCls:
     optimizer=@torch.optim.Adam
+#    optimizer=@torch.optim.SGD
     downstream_cls=@models.DownstreamForCls
+#    lr_scheduler=@models.ExponentialDecayWithWarmup
 
 tasks.models.fit_model:
     model_cls=@models.S3PRLUpstreamMLPDownstreamForCls
@@ -62,7 +77,8 @@ pl.Trainer:
     logger=@pl.loggers.CSVLogger()
     devices=%DEVICE
 #    callbacks=[@pl.callbacks.ModelCheckpoint()]
-    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.EarlyStopping()]
+#    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.EarlyStopping()]
+    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.EarlyStopping(), @pl.callbacks.LearningRateMonitor()]
     accelerator='gpu'
     accumulate_grad_batches=%GRAD_ACC
     num_sanity_val_steps=1
