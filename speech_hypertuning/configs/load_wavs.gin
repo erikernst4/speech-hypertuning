@@ -2,6 +2,24 @@ tasks.load_data.DictDataset:
     out_cols=['class_id', 'wav', 'wav_lens']
     preprocessors=[@tasks.load_data.ProcessorReadAudio]
 
+test/tasks.load_data.DictDataset:
+    out_cols=['class_id', 'wav', 'wav_lens']
+    preprocessors=[@test/tasks.load_data.ProcessorReadAudio]
+
+test/tasks.load_data.ProcessorReadAudio:
+    input = 'filename'
+    max_length = %MAX_AUDIO_DURATION
+    output = 'wav'
+
+val/tasks.load_data.DictDataset:
+    out_cols=['class_id', 'wav', 'wav_lens']
+    preprocessors=[@val/tasks.load_data.ProcessorReadAudio]
+
+val/tasks.load_data.ProcessorReadAudio:
+    input = 'filename'
+    max_length = %MAX_AUDIO_DURATION
+    output = 'wav'
+
 tasks.load_data.ProcessorReadAudio:
     input = 'filename'
     max_length = %MAX_AUDIO_DURATION
