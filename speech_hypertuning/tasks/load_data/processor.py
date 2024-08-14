@@ -1,19 +1,38 @@
 import random
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import soundfile as sf
 import torch
 
 
-def ProcessorReadAudio(x, state, input=None, output=None, max_length=None, mono=True):
-    def read_sample(x, state, max_length, mono):
+def ProcessorReadAudio(
+    x,
+    state,
+    input=None,
+    output=None,
+    max_length: Union[float, int] = None,
+    mono: bool = True,
+    sampling_method: Optional[str] = None,
+):
+    def read_sample(
+        x,
+        state: Dict[str, Any],
+        max_length: Union[float, int],
+        mono: bool,
+        sampling_method: str,
+    ):
         if max_length is not None:
             audio_info = sf.info(x[input])
             desired_frames = int(max_length * audio_info.samplerate)
             total_frames = audio_info.frames
             if total_frames > desired_frames:
-                start = random.randint(0, total_frames - desired_frames)
+                if sampling_method == "random":
+                    start = random.randint(0, total_frames - desired_frames)
+                elif sampling_method == "starting_chunk":
+                    start = 0
+                else:
+                    raise ValueError("Not a valid sampling method for chunking")
                 stop = start + desired_frames
             else:
                 start = 0
@@ -36,8 +55,11 @@ def ProcessorReadAudio(x, state, input=None, output=None, max_length=None, mono=
             wav = np.mean(wav, axis=-1)
         return wav
 
+    if sampling_method is None:
+        sampling_method = "random"
+
     try:
-        wav = read_sample(x, state, max_length, mono)
+        wav = read_sample(x, state, max_length, mono, sampling_method)
     except:
         print('Failed reading {}'.format(x))
         wav = None
