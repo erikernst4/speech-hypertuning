@@ -5,7 +5,7 @@ ginpipe configs/default_parameters.gin \
 			--module_list configs/imports \
 			--project_name 8-eval_vs_no_eval \
 			--experiment_name "eval" \
-        --mods "tasks.models.S3PRLUpstreamMLPDownstreamForCls.frozen_upstream=False"
+        --mods "tasks.models.S3PRLUpstreamMLPDownstreamForCls.upstream_eval_mode=False"
 
 ginpipe configs/default_parameters.gin \
 			configs/train.gin \
@@ -14,4 +14,4 @@ ginpipe configs/default_parameters.gin \
 			--module_list configs/imports \
 			--project_name 8-eval_vs_no_eval \
 			--experiment_name "eval" \
-        --mods "tasks.models.S3PRLUpstreamMLPDownstreamForCls.frozen_upstream=True"
+        --mods "tasks.models.S3PRLUpstreamMLPDownstreamForCls.upstream_eval_mode=True"
