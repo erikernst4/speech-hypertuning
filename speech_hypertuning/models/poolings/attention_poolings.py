@@ -64,10 +64,12 @@ class TransformerLayer(torch.nn.Module):
     def __init__(
         self,
         embed_dim: int,
+        *args,
         num_heads: Optional[int] = None,
         num_layers: Optional[int] = None,
         dim_feedforward: Optional[int] = None,
         dropout: Optional[float] = None,
+        **kwargs,
     ):
         super().__init__()
         num_heads = num_heads if num_heads is not None else 16
