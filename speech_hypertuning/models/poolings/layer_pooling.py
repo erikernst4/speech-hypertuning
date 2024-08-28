@@ -3,7 +3,7 @@ from typing import List, Optional
 import torch
 
 from .attention_poolings import (AttentionPooling, PositionalEncoding,
-                                 SelfAttentionLayer)
+                                 SelfAttentionLayer, TransformerLayer)
 
 
 class WeightedAverageLayerPooling(torch.nn.Module):
@@ -135,3 +135,8 @@ class SelfAttentionLayerPooling(AttentionLayerPooling):
         self.pos_encoder = (
             PositionalEncoding(embed_dim) if use_positional_encoding else None
         )
+
+class TransformerLayerPooling(AttentionLayerPooling):
+    def __init__(self, embed_dim: int, *args, **kwargs):
+        super().__init__(embed_dim, *args, **kwargs)
+        self.attention = TransformerLayer(embed_dim, *args, **kwargs)

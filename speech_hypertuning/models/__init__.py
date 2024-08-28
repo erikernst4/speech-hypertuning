@@ -6,6 +6,7 @@ from .poolings import (
     SummaryMixingPooling,
     TemporalMeanPooling,
     TransformerPooling,
+    TransformerLayerPooling,
     WeightedAverageLayerPooling,
 )
 from .lr_scheduling import ExponentialDecayWithWarmup
