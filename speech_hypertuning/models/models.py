@@ -125,7 +125,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         )
         self.register_buffer("dataset_std", state.get('dataset_std', torch.tensor([])))
 
-        if self.upstream_eval_mode:
+        if self.upstream_eval_mode and self.frozen_upstream:
             self.upstream.eval()
 
         upstream_dim = self.upstream.hidden_sizes[0]
@@ -344,7 +344,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             lr_scheduler_config = {
                 "scheduler": self.lr_scheduler(optimizer),
                 "monitor": "val_loss",
-                "interval": "epoch",
+                "interval": "step",
                 "frequency": 1,
             }
             optimizer_config['lr_scheduler'] = lr_scheduler_config
