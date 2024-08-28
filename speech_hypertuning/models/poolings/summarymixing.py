@@ -141,7 +141,7 @@ class SummaryMixing(nn.Module):
         if attention_mask is not None:
             attention_mask = torch.logical_not(attention_mask).unsqueeze(-1).float()
         else:
-            attention_mask = torch.ones((x.shape[0], x.shape[1])).unsqueeze(-1).float()
+            attention_mask = torch.ones((x.shape[0], x.shape[1])).unsqueeze(-1).float().to("cuda")
 
         if self.mode == "SummaryMixing":
             return self._forward_mixing(x, attention_mask)
