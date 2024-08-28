@@ -8,7 +8,7 @@ test/tasks.load_data.DictDataset:
 
 test/tasks.load_data.ProcessorReadAudio:
     input = 'filename'
-    max_length = %MAX_AUDIO_DURATION
+    max_length = %FILTER_AUDIO_LENGTH
     output = 'wav'
 
 val/tasks.load_data.DictDataset:
@@ -17,7 +17,7 @@ val/tasks.load_data.DictDataset:
 
 val/tasks.load_data.ProcessorReadAudio:
     input = 'filename'
-    max_length = %MAX_AUDIO_DURATION
+    max_length = %FILTER_AUDIO_LENGTH
     output = 'wav'
 
 tasks.load_data.ProcessorReadAudio:
