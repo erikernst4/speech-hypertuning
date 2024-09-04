@@ -9,6 +9,7 @@ import torchmetrics
 from lightning import LightningModule
 from loguru import logger
 from s3prl.nn import S3PRLUpstream
+from peft import LoraConfig, get_peft_model
 
 from speech_hypertuning.models.poolings import (
     TemporalMeanPooling,
@@ -352,3 +353,17 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
     def set_optimizer_state(self, state: Dict[str, Any]) -> None:
         self.opt_state = state
+
+
+class LoRaS3PRLUpstreamMLPDownstreamForCls(S3PRLUpstreamMLPDownstreamForCls):
+    def __init__(self, lora_config=None):
+        super().__init__()
+        self.model = S3PRLUpstreamMLPDownstreamForCls()
+        if lora_config is not None:
+            lora_conf = lora_config()
+            self.lora_config = LoraConfig(**lora_conf)
+            if lora_conf['r'] > 0:
+                self.model = get_peft_model(self.model, self.lora_config)
+
+    def forward(self, *args, **kwargs):
+        return self.model(*args, **kwargs)
