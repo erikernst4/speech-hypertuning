@@ -16,6 +16,9 @@ from speech_hypertuning.models.poolings import (
     WeightedAverageLayerPooling,
 )
 
+class Config(dict):
+   def __init__(self, *arg, **kw):
+      super(Config, self).__init__(*arg, **kw)
 
 class PoolingProjector(torch.nn.Module):
     def __init__(
@@ -93,6 +96,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         pooling_projector: Optional[bool] = None,
         downstream_cls: Optional[torch.nn.Module] = None,
         frozen_upstream: Optional[bool] = None,
+        lora_config: Config = None,
     ):
         super().__init__()
         self.opt_state = state
@@ -105,6 +109,15 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
         self.prior_distribution_entropy = state["prior_distribution_entropy"]
 
         self.upstream = S3PRLUpstream(upstream)
+        
+        # Lora configuration
+        self.lora_config = None
+        if lora_config is not None:
+            lora_conf = lora_config()
+            self.lora_config = LoraConfig(**lora_conf)
+            if lora_conf['r'] > 0:
+                self.upstream = get_peft_model(self.upstream, self.lora_config)
+
         self.upstream_eval_mode = (
             upstream_eval_mode if upstream_eval_mode is not None else True
         )
@@ -353,17 +366,3 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
     def set_optimizer_state(self, state: Dict[str, Any]) -> None:
         self.opt_state = state
-
-
-class LoRaS3PRLUpstreamMLPDownstreamForCls(S3PRLUpstreamMLPDownstreamForCls):
-    def __init__(self, lora_config=None):
-        super().__init__()
-        self.model = S3PRLUpstreamMLPDownstreamForCls()
-        if lora_config is not None:
-            lora_conf = lora_config()
-            self.lora_config = LoraConfig(**lora_conf)
-            if lora_conf['r'] > 0:
-                self.model = get_peft_model(self.model, self.lora_config)
-
-    def forward(self, *args, **kwargs):
-        return self.model(*args, **kwargs)

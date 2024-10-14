@@ -1,4 +1,4 @@
-from .models import DownstreamForCls, S3PRLUpstreamMLPDownstreamForCls
+from .models import DownstreamForCls, S3PRLUpstreamMLPDownstreamForCls, Config
 from .poolings import (
     FixedLayerPooling,
     SelfAttentionLayerPooling,
