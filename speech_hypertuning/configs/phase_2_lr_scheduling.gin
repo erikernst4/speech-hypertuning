@@ -1,0 +1,11 @@
+torch.optim.SGD:
+    lr=0.0005
+    momentum=0.9
+    weight_decay=1.0e-4
+
+models.ExponentialDecayWithWarmup:
+    initial_lr=0.0005
+    final_lr=0.000275
+    warmup_epochs=3
+    warmup_target_lr=0.0005
+    total_epochs=5
