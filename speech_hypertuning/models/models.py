@@ -1,6 +1,7 @@
 import warnings
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from functools import partial
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -9,12 +10,12 @@ import torchmetrics
 from lightning import LightningModule
 from loguru import logger
 from s3prl.nn import S3PRLUpstream
-from peft import LoraConfig, get_peft_model
-
+from peft import LoraConfig
 from speech_hypertuning.models.poolings import (
     TemporalMeanPooling,
     WeightedAverageLayerPooling,
 )
+from speech_hypertuning.models.lora import LinearWithLoRA
 
 class Config(dict):
    def __init__(self, *arg, **kw):
@@ -116,7 +117,13 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             lora_conf = lora_config()
             self.lora_config = LoraConfig(**lora_conf)
             if lora_conf['r'] > 0:
-                self.upstream = get_peft_model(self.upstream, self.lora_config)
+                for param in self.upstream.parameters():
+                    param.requires_grad = False
+
+                assign_lora = partial(LinearWithLoRA, rank=self.lora_config.r, alpha=self.lora_config.lora_alpha, dropout=self.lora_config.lora_dropout)
+                for i in range(len(self.upstream.upstream.model.encoder.layers)):
+                    self.upstream.upstream.model.encoder.layers[i].fc1 = assign_lora(self.upstream.upstream.model.encoder.layers[i].fc1)
+                    self.upstream.upstream.model.encoder.layers[i].fc2 = assign_lora(self.upstream.upstream.model.encoder.layers[i].fc2)
 
         self.upstream_eval_mode = (
             upstream_eval_mode if upstream_eval_mode is not None else True
@@ -200,6 +207,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
             top_k=min(5, self.num_classes),
         )
 
+
     def forward(self, x: Dict[str, Any]):  # pylint: disable=arguments-differ
         upstream_embedding = self.extract_upstream_embedding(x)
 
@@ -230,7 +238,7 @@ class S3PRLUpstreamMLPDownstreamForCls(LightningModule):
 
         return upstream_embedding
 
-    def forward_upstream(self, x: Dict[str, Any]) -> torch.Tensor:
+    def forward_upstream(self, x: Dict[str, Any]) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         if (
             not "upstream_embedding_precalculated" in x
             or not x["upstream_embedding_precalculated"].all().item()
