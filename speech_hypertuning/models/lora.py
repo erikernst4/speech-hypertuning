@@ -17,7 +17,7 @@ class LoRALayer():
         self.rank = rank
         std_dev = 1 / torch.sqrt(torch.tensor(rank).float())
         self.lora_A = torch.nn.Parameter(torch.randn(in_dim, rank) * std_dev)
-        self.lora_B = torch.nn.Parameter(torch.randn(rank, out_dim) * std_dev)
+        self.lora_B = torch.nn.Parameter(torch.zeros(rank, out_dim))
         
         self.alpha = alpha
         self.scaling = self.alpha / self.rank
